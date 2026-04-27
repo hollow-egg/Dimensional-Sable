@@ -87,63 +87,50 @@ public class Commands {
                 oldToNewidMap.put(subLevelid, copy.getUniqueId());
             }
 
-            Set<RopePhysicsObject> visited = new HashSet<>();
             //copy ropes
-            for (UUID oldSubLevelId : new ArrayList<>(compoundSubLevel.keySet())) {
+            for (RopePhysicsObject rope : SubLevelConnectionManager.getRopeSet()) {
 
-                Vector<RopePhysicsObject> ropes = compoundSubLevel.get(oldSubLevelId);
-                if (ropes == null || ropes.isEmpty()) continue;
+                RopePhysicsObjectAccessor accessor = (RopePhysicsObjectAccessor) rope;
 
-                UUID mappedSubLevelId = oldToNewidMap.get(oldSubLevelId);
+                UUID oldStartId = accessor.dimensionalSable$startLevel();
+                UUID oldEndId = accessor.dimensionalSable$endLevel();
 
-                for (RopePhysicsObject rope : ropes) {
+                ServerSubLevel oldStart = (ServerSubLevel) sourceContainer.getSubLevel(oldStartId);
+                ServerSubLevel oldEnd = (ServerSubLevel) sourceContainer.getSubLevel(oldEndId);
 
-                    //avoid adding a rope more than once
-                    if (visited.contains(rope)) continue;
-                    visited.add(rope);
+                if (oldStart == null || oldEnd == null) continue;
 
-                    RopePhysicsObjectAccessor accessor = (RopePhysicsObjectAccessor) rope;
+                UUID newStartId = oldToNewidMap.get(oldStartId);
+                UUID newEndId = oldToNewidMap.get(oldEndId);
 
-                    UUID oldStartId = accessor.dimensionalSable$startLevel();
-                    UUID oldEndId = accessor.dimensionalSable$endLevel();
+                ServerSubLevel newStart = (ServerSubLevel) destinationContainer.getSubLevel(newStartId);
+                ServerSubLevel newEnd = (ServerSubLevel) destinationContainer.getSubLevel(newEndId);
 
-                    ServerSubLevel oldStart = (ServerSubLevel) sourceContainer.getSubLevel(oldStartId);
-                    ServerSubLevel oldEnd = (ServerSubLevel) sourceContainer.getSubLevel(oldEndId);
+                if (newStart == null || newEnd == null) continue;
 
-                    if (oldStart == null || oldEnd == null) continue;
+                //offset rope coordinates to match relative position
+                Vector3d delta = newStart.logicalPose().position().sub(oldStart.logicalPose().position());
+                List<Vector3d> newPoints = rope.getPoints().stream().map(p -> p.add(delta)).toList();
 
-                    UUID newStartId = oldToNewidMap.get(oldStartId);
-                    UUID newEndId = oldToNewidMap.get(oldEndId);
+                //create new rope
+                RopePhysicsObject newRope = new RopePhysicsObject(newPoints, rope.getCollisionRadius());
+                destinationContainer.physicsSystem().addObject(newRope);
 
-                    ServerSubLevel newStart = (ServerSubLevel) destinationContainer.getSubLevel(newStartId);
-                    ServerSubLevel newEnd = (ServerSubLevel) destinationContainer.getSubLevel(newEndId);
+                newRope.setAttachment(
+                        RopeHandle.AttachmentPoint.START,
+                        rope.getPoints().getFirst(),
+                        newStart
+                );
 
-                    if (newStart == null || newEnd == null) continue;
+                newRope.setAttachment(
+                        RopeHandle.AttachmentPoint.END,
+                        rope.getPoints().getLast(),
+                        newEnd
+                );
 
-                    //offset rope coordinates to match relative position
-                    Vector3d delta = newStart.logicalPose().position().sub(oldStart.logicalPose().position());
-                    List<Vector3d> newPoints = rope.getPoints().stream().map(p -> p.add(delta)).toList();
-
-                    //create new rope
-                    RopePhysicsObject newRope = new RopePhysicsObject(newPoints, rope.getCollisionRadius());
-                    destinationContainer.physicsSystem().addObject(newRope);
-
-                    newRope.setAttachment(
-                            RopeHandle.AttachmentPoint.START,
-                            rope.getPoints().getFirst(),
-                            newStart
-                    );
-
-                    newRope.setAttachment(
-                            RopeHandle.AttachmentPoint.END,
-                            rope.getPoints().getLast(),
-                            newEnd
-                    );
-
-                    //update sublevels
-                    destinationContainer.physicsSystem().getPipeline().onStatsChanged(newStart);
-                    destinationContainer.physicsSystem().getPipeline().onStatsChanged(newEnd);
-                }
+                //update sublevels
+                destinationContainer.physicsSystem().getPipeline().onStatsChanged(newStart);
+                destinationContainer.physicsSystem().getPipeline().onStatsChanged(newEnd);
             }
 
             //delete old sublevels

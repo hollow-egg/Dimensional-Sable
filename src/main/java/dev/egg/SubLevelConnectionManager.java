@@ -6,6 +6,11 @@ import java.util.*;
 
 public class SubLevelConnectionManager {
     private static final HashMap<UUID, Vector<RopePhysicsObject>> subLevelRopeMap = new HashMap<>(); //sublevel id to list of ropes
+    private static final Set<RopePhysicsObject> ropeSet = new HashSet<>();
+
+    public static Set<RopePhysicsObject> getRopeSet() {
+        return ropeSet;
+    }
 
     public static HashMap<UUID, Vector<RopePhysicsObject>> GetConnectedSubLevels(UUID startLevel)
     {
@@ -61,6 +66,8 @@ public class SubLevelConnectionManager {
 
         subLevelRopeMap.get(startLevel).add(rope);
         subLevelRopeMap.get(endLevel).add(rope);
+
+        ropeSet.add(rope);
     }
     public static void RemoveRopeConnection(RopePhysicsObject rope)
     {
@@ -77,5 +84,7 @@ public class SubLevelConnectionManager {
         if (subLevelRopeMap.containsKey(endLevel) && //if attached to self
             subLevelRopeMap.get(endLevel).isEmpty())
             subLevelRopeMap.remove(endLevel);
+
+        ropeSet.remove(rope);
     }
 }
