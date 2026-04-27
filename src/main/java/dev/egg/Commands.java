@@ -21,6 +21,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import org.joml.Vector3d;
 
 import java.util.*;
 
@@ -86,17 +87,20 @@ public class Commands {
                 oldToNewidMap.put(subLevelid, copy.getUniqueId());
             }
 
+            Set<RopePhysicsObject> visited = new HashSet<>();
             //copy ropes
             for (UUID oldSubLevelId : new ArrayList<>(compoundSubLevel.keySet())) {
 
-                Vector<RopePhysicsObject> originalRopes = compoundSubLevel.get(oldSubLevelId);
-                if (originalRopes == null || originalRopes.isEmpty()) continue;
+                Vector<RopePhysicsObject> ropes = compoundSubLevel.get(oldSubLevelId);
+                if (ropes == null || ropes.isEmpty()) continue;
 
                 UUID mappedSubLevelId = oldToNewidMap.get(oldSubLevelId);
 
-                List<RopePhysicsObject> ropesSnapshot = new ArrayList<>(originalRopes);
+                for (RopePhysicsObject rope : ropes) {
 
-                for (RopePhysicsObject rope : ropesSnapshot) {
+                    //avoid adding a rope more than once
+                    if (visited.contains(rope)) continue;
+                    visited.add(rope);
 
                     RopePhysicsObjectAccessor accessor = (RopePhysicsObjectAccessor) rope;
 
@@ -108,15 +112,20 @@ public class Commands {
 
                     if (oldStart == null || oldEnd == null) continue;
 
-                    UUID newStartId = oldToNewidMap.get(oldStart.getUniqueId());
-                    UUID newEndId = oldToNewidMap.get(oldEnd.getUniqueId());
+                    UUID newStartId = oldToNewidMap.get(oldStartId);
+                    UUID newEndId = oldToNewidMap.get(oldEndId);
 
                     ServerSubLevel newStart = (ServerSubLevel) destinationContainer.getSubLevel(newStartId);
                     ServerSubLevel newEnd = (ServerSubLevel) destinationContainer.getSubLevel(newEndId);
 
                     if (newStart == null || newEnd == null) continue;
 
-                    RopePhysicsObject newRope = new RopePhysicsObject(rope.getPoints(), rope.getCollisionRadius());
+                    //offset rope coordinates to match relative position
+                    Vector3d delta = newStart.logicalPose().position().sub(oldStart.logicalPose().position());
+                    List<Vector3d> newPoints = rope.getPoints().stream().map(p -> p.add(delta)).toList();
+
+                    //create new rope
+                    RopePhysicsObject newRope = new RopePhysicsObject(newPoints, rope.getCollisionRadius());
                     destinationContainer.physicsSystem().addObject(newRope);
 
                     newRope.setAttachment(
@@ -130,6 +139,10 @@ public class Commands {
                             rope.getPoints().getLast(),
                             newEnd
                     );
+
+                    //update sublevels
+                    destinationContainer.physicsSystem().getPipeline().onStatsChanged(newStart);
+                    destinationContainer.physicsSystem().getPipeline().onStatsChanged(newEnd);
                 }
             }
 
