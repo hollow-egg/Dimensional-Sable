@@ -59,7 +59,7 @@ public class Commands {
 
             WarpSubLevels(compoundSubLevel, sourcePlotContainer, destinationPlotContainer);
 
-            source.sendSuccess(()->Component.literal("Teleported " + compoundSubLevel.size() + " to " + dimension.dimension().toString()), false);
+            source.sendSuccess(()->Component.literal("Teleported " + compoundSubLevel.size() + " sublevels to " + dimension.dimension().location().getPath()), false);
             return Command.SINGLE_SUCCESS;
         }
 
