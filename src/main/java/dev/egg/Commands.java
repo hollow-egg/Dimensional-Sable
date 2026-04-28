@@ -5,15 +5,14 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import dev.ryanhcode.sable.api.SubLevelHelper;
 import dev.ryanhcode.sable.api.command.SableCommandHelper;
 import dev.ryanhcode.sable.api.command.SubLevelArgumentType;
-import dev.ryanhcode.sable.api.physics.object.rope.RopeHandle;
-import dev.ryanhcode.sable.api.physics.object.rope.RopePhysicsObject;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
 import dev.ryanhcode.sable.companion.math.Pose3d;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
-import dev.ryanhcode.sable.sublevel.plot.ServerLevelPlot;
+import dev.ryanhcode.sable.sublevel.SubLevel;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.DimensionArgument;
@@ -21,13 +20,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import org.joml.Vector3d;
 
 import java.util.*;
 
-import static dev.egg.SubLevelConnectionManager.GetConnectedSubLevels;
 import static dev.ryanhcode.sable.api.command.SableCommandHelper.requireNotNull;
 
 public class Commands {
@@ -55,7 +51,7 @@ public class Commands {
                 //return Command.SINGLE_SUCCESS;
 
             ServerSubLevel sublevel = SubLevelArgumentType.getSingleSubLevel(ctx, "sub_level");
-            HashMap<UUID, Vector<RopePhysicsObject>> compoundSubLevel = GetConnectedSubLevels((sublevel).getUniqueId());
+            Collection<SubLevel> compoundSubLevel = SubLevelHelper.getConnectedChain(sublevel);
 
             WarpSubLevels(compoundSubLevel, sourcePlotContainer, destinationPlotContainer);
 
@@ -64,16 +60,17 @@ public class Commands {
         }
 
         //this function is *basically* the same as the clone command from sable
-        private static void WarpSubLevels(HashMap<UUID,Vector<RopePhysicsObject>> compoundSubLevel, ServerSubLevelContainer sourceContainer, ServerSubLevelContainer destinationContainer) {
+        private static void WarpSubLevels(Collection<SubLevel> compoundSubLevel, ServerSubLevelContainer sourceContainer, ServerSubLevelContainer destinationContainer) {
             //map old ids to new ids for ropes later
             Vector<ServerSubLevel> oldSublevels = new Vector<>();
 
-            for (UUID subLevelid : compoundSubLevel.keySet()) {
-                ServerSubLevel subLevel = Objects.requireNonNull((ServerSubLevel) sourceContainer.getSubLevel(subLevelid));
-                oldSublevels.add(subLevel);
+            for (SubLevel subLevel : compoundSubLevel) {
+
+                ServerSubLevel serverSubLevel = (ServerSubLevel) subLevel;
+                oldSublevels.add(serverSubLevel);
 
                 //save sublevel data
-                CompoundTag tag = SubLevelTemplate.save(subLevel.getPlot());
+                CompoundTag tag = SubLevelTemplate.save(serverSubLevel.getPlot());
                 //allocate
                 Pose3d pose = new Pose3d();
                 pose.position().set(0,70.5,0); //temp so it's easier to find
@@ -81,8 +78,8 @@ public class Commands {
                 //copy data to plot in other dimension
                 SubLevelTemplate.load(copy.getPlot(), tag);
 
-                if (subLevel.getName() != null)
-                    copy.setName(subLevel.getName());
+                if (serverSubLevel.getName() != null)
+                    copy.setName(serverSubLevel.getName());
             }
 
             //delete old sublevels
