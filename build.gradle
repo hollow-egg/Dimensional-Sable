@@ -75,9 +75,14 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 
 dependencies {
+    //api stuffs
     api files("libs/sable-common-${minecraft_version}-${sable_version}.jar")
     api files("libs/sable-companion-common-${minecraft_version}-${sable_companion_version}.jar")
+    //required
     implementation files("libs/sable-neoforge-${minecraft_version}-${sable_version}.jar")
+    //optional
+    compileOnly(files("libs/create-${minecraft_version}-${create_version}.jar"))
+    compileOnly(files("libs/create-aeronautics-bundled-${minecraft_version}-${create_aeronautics_version}.jar"))
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

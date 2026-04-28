@@ -4,6 +4,8 @@ license = "MIT" # Review your options at https://choosealicense.com/.
 
 [[mixins]]
 config = "dimensional_sable.mixins.json"
+[[accessTransformers]]
+file="META-INF/accesstransformer.cfg"
 
 [[mods]] #mandatory
 modId = "dimensional_sable" #mandatory
@@ -22,6 +24,24 @@ side = "BOTH" # Side this dependency is applied on - 'BOTH', 'CLIENT' or 'SERVER
 modId = "minecraft"
 type="required" #mandatory (Can be one of "required", "optional", "incompatible" or "discouraged")
 versionRange = "[1.21.1,)"
+ordering = "NONE"
+side = "BOTH"
+[[dependencies.dimensional_sable]]
+modId = "sable"
+type="required" #mandatory (Can be one of "required", "optional", "incompatible" or "discouraged")
+versionRange = "[1.1.3,)"
+ordering = "NONE"
+side = "BOTH"
+[[dependencies.dimensional_sable]]
+modId = "create"
+type="optional" #mandatory (Can be one of "required", "optional", "incompatible" or "discouraged")
+versionRange = "[6.0.10,)"
+ordering = "NONE"
+side = "BOTH"
+[[dependencies.dimensional_sable]]
+modId = "simulated"
+type="optional" #mandatory (Can be one of "required", "optional", "incompatible" or "discouraged")
+versionRange = "[1.1.3,)"
 ordering = "NONE"
 side = "BOTH"
 

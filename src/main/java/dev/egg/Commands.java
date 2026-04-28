@@ -11,6 +11,7 @@ import dev.ryanhcode.sable.api.physics.object.rope.RopeHandle;
 import dev.ryanhcode.sable.api.physics.object.rope.RopePhysicsObject;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
+import dev.ryanhcode.sable.companion.math.Pose3d;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.plot.ServerLevelPlot;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
@@ -20,6 +21,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.joml.Vector3d;
 
@@ -49,8 +51,8 @@ public class Commands {
             final ServerSubLevelContainer sourcePlotContainer = SableCommandHelper.requireSubLevelContainer(source);
             final ServerSubLevelContainer destinationPlotContainer = requireNotNull(Objects.requireNonNull(SubLevelContainer.getContainer(dimension)), new SimpleCommandExceptionType(Component.literal("Invalid Dimension!")));
 
-            if (sourcePlotContainer.equals(destinationPlotContainer)) //same dimension
-                return Command.SINGLE_SUCCESS;
+            //if (sourcePlotContainer.equals(destinationPlotContainer)) //same dimension
+                //return Command.SINGLE_SUCCESS;
 
             ServerSubLevel sublevel = SubLevelArgumentType.getSingleSubLevel(ctx, "sub_level");
             HashMap<UUID, Vector<RopePhysicsObject>> compoundSubLevel = GetConnectedSubLevels((sublevel).getUniqueId());
@@ -64,7 +66,6 @@ public class Commands {
         //this function is *basically* the same as the clone command from sable
         private static void WarpSubLevels(HashMap<UUID,Vector<RopePhysicsObject>> compoundSubLevel, ServerSubLevelContainer sourceContainer, ServerSubLevelContainer destinationContainer) {
             //map old ids to new ids for ropes later
-            HashMap<UUID,UUID> oldToNewidMap = new HashMap<>();
             Vector<ServerSubLevel> oldSublevels = new Vector<>();
 
             for (UUID subLevelid : compoundSubLevel.keySet()) {
@@ -72,65 +73,16 @@ public class Commands {
                 oldSublevels.add(subLevel);
 
                 //save sublevel data
-                final CompoundTag tag = subLevel.getPlot().save();
-                //allocate and copy data to plot in other dimension
-                final ServerSubLevel copy = (ServerSubLevel) destinationContainer.allocateNewSubLevel(subLevel.logicalPose());
-                final ServerLevelPlot plot = copy.getPlot();
-                plot.load(tag);
+                CompoundTag tag = SubLevelTemplate.save(subLevel.getPlot());
+                //allocate
+                Pose3d pose = new Pose3d();
+                pose.position().set(0,70.5,0); //temp so it's easier to find
+                ServerSubLevel copy = (ServerSubLevel) destinationContainer.allocateNewSubLevel(pose);
+                //copy data to plot in other dimension
+                SubLevelTemplate.load(copy.getPlot(), tag);
 
-                copy.updateLastPose();
-                //set name if any
                 if (subLevel.getName() != null)
                     copy.setName(subLevel.getName());
-
-                //save ids to map
-                oldToNewidMap.put(subLevelid, copy.getUniqueId());
-            }
-
-            //copy ropes
-            for (RopePhysicsObject rope : SubLevelConnectionManager.getRopeSet()) {
-
-                RopePhysicsObjectAccessor accessor = (RopePhysicsObjectAccessor) rope;
-
-                UUID oldStartId = accessor.dimensionalSable$startLevel();
-                UUID oldEndId = accessor.dimensionalSable$endLevel();
-
-                ServerSubLevel oldStart = (ServerSubLevel) sourceContainer.getSubLevel(oldStartId);
-                ServerSubLevel oldEnd = (ServerSubLevel) sourceContainer.getSubLevel(oldEndId);
-
-                if (oldStart == null || oldEnd == null) continue;
-
-                UUID newStartId = oldToNewidMap.get(oldStartId);
-                UUID newEndId = oldToNewidMap.get(oldEndId);
-
-                ServerSubLevel newStart = (ServerSubLevel) destinationContainer.getSubLevel(newStartId);
-                ServerSubLevel newEnd = (ServerSubLevel) destinationContainer.getSubLevel(newEndId);
-
-                if (newStart == null || newEnd == null) continue;
-
-                //offset rope coordinates to match relative position
-                Vector3d delta = newStart.logicalPose().position().sub(oldStart.logicalPose().position());
-                List<Vector3d> newPoints = rope.getPoints().stream().map(p -> p.add(delta)).toList();
-
-                //create new rope
-                RopePhysicsObject newRope = new RopePhysicsObject(newPoints, rope.getCollisionRadius());
-                destinationContainer.physicsSystem().addObject(newRope);
-
-                newRope.setAttachment(
-                        RopeHandle.AttachmentPoint.START,
-                        rope.getPoints().getFirst(),
-                        newStart
-                );
-
-                newRope.setAttachment(
-                        RopeHandle.AttachmentPoint.END,
-                        rope.getPoints().getLast(),
-                        newEnd
-                );
-
-                //update sublevels
-                destinationContainer.physicsSystem().getPipeline().onStatsChanged(newStart);
-                destinationContainer.physicsSystem().getPipeline().onStatsChanged(newEnd);
             }
 
             //delete old sublevels
