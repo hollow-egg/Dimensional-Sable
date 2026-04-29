@@ -68,10 +68,8 @@ public record SubLevelTemplate(CompoundTag plotTag) {
 
         final ServerLevel level = plot.getSubLevel().getLevel();
 
-        final BlockPos center = plot.getCenterBlock();
         int minY = level.dimensionType().minY();
-        System.out.println("SAVE center: " + center);
-        System.out.println("Min Y: " + minY);
+        final BlockPos center = plot.getCenterBlock().offset(0,-minY,0); // minY accounts for the different starting y levels a dimension can have (overworld is -64, nether is 0)
 
         final CompoundTag chunks = new CompoundTag();
         for (final PlotChunkHolder chunkHolder : plot.getLoadedChunks()) {
@@ -119,7 +117,7 @@ public record SubLevelTemplate(CompoundTag plotTag) {
                     int y = blockEntityNBT.getInt("y");
                     int z = blockEntityNBT.getInt("z");
                     blockEntityNBT.putInt("x", x - center.getX());
-                    blockEntityNBT.putInt("y", y - center.getY() - minY); // minY accounts for the different starting y levels a dimension can have (overworld is -64, nether is 0)
+                    blockEntityNBT.putInt("y", y - center.getY());
                     blockEntityNBT.putInt("z", z - center.getZ());
                     blockEntitiesTag.add(blockEntityNBT);
                 }
@@ -171,10 +169,8 @@ public record SubLevelTemplate(CompoundTag plotTag) {
         final ServerSubLevel subLevel = destinationPlot.getSubLevel();
         final ServerLevel level = subLevel.getLevel();
 
-        final BlockPos center = destinationPlot.getCenterBlock();
         int minY = level.dimensionType().minY();
-        System.out.println("LOAD center: " + center);
-        System.out.println("Min Y: " + minY);
+        final BlockPos center = destinationPlot.getCenterBlock().offset(0,minY,0); // minY accounts for the different starting y levels a dimension can have (overworld is -64, nether is 0)
 
         if (tag.contains("biome")) {
             final ResourceLocation location = ResourceLocation.tryParse(tag.getString("biome"));
@@ -284,7 +280,7 @@ public record SubLevelTemplate(CompoundTag plotTag) {
                 BlockPos offset = BlockEntity.getPosFromTag(blockEntityTag);
                 BlockPos pos = center.offset(offset);
                 blockEntityTag.putInt("x", pos.getX());
-                blockEntityTag.putInt("y", pos.getY() + minY); // minY accounts for the different starting y levels a dimension can have (overworld is -64, nether is 0)
+                blockEntityTag.putInt("y", pos.getY());
                 blockEntityTag.putInt("z", pos.getZ());
 
                 if (keepBlockEntityPacked) {
