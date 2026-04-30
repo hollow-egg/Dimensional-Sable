@@ -3,9 +3,10 @@ An addon to the Sable Mod that should allow for teleporting sublevels across dim
 Hopefully maybe. [VERY WIP, USE AT YOUR OWN RISK] 
 
 Currently supported block entities:
-- Springs
-- Rope Connectors
-- Rope Winches
+- Simulated:
+  - Springs
+  - Rope Connectors
+  - Rope Winches
 
 If you want to contribute, hit me up on discord. Username is hollow_egg.
 If you just want to steal the (very bad) code, you can do that too ^-^
