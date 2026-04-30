@@ -22,11 +22,11 @@ import java.util.UUID;
 
 public class SubLevelWarper {
 
-    public static int WarpSubLevel(ServerSubLevel subLevel, Level dimension, BlockPos position)
+    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final BlockPos position)
     {
         return WarpSubLevel(subLevel, dimension, position, true);
     }
-    public static int WarpSubLevel(ServerSubLevel subLevel, Level dimension, BlockPos position, boolean warpConnected)
+    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final BlockPos position, boolean warpConnected)
     {
         ServerSubLevelContainer sourceContainer = ServerSubLevelContainer.getContainer(subLevel.getLevel());
         ServerSubLevelContainer destinationContainer = ServerSubLevelContainer.getContainer((ServerLevel)dimension);
@@ -46,7 +46,8 @@ public class SubLevelWarper {
     }
 
     //this function is *basically* the same as the clone command from sable
-    private static void WarpSubLevels(Collection<SubLevel> compoundSubLevel, ServerSubLevelContainer sourceContainer, ServerSubLevelContainer destinationContainer, Vector3d center, Vector3d position) {
+    private static void WarpSubLevels(final Collection<SubLevel> compoundSubLevel, final ServerSubLevelContainer sourceContainer, final ServerSubLevelContainer destinationContainer, final Vector3d center, final Vector3d position) {
+        DimensionalSable.LOGGER.info("FIRST: " + position.x + " " + position.y + " " + position.z);
 
         HashMap<UUID,Pair<UUID,Vec3i>> oldToNew = new HashMap<>();
         HashMap<UUID,CompoundTag> subLevelTags = new HashMap<>();
@@ -60,7 +61,7 @@ public class SubLevelWarper {
             CompoundTag tag = SubLevelTemplate.save(serverSubLevel.getPlot());
             //allocate
             Pose3d pose = new Pose3d();
-            pose.position().set(subLevel.logicalPose().position().sub(center).add(position)); //keeps relative positions
+            pose.position().set(new Vector3d(subLevel.logicalPose().position()).sub(center).add(position)); //keeps relative positions
             pose.orientation().set(subLevel.logicalPose().orientation());
             ServerSubLevel copy = (ServerSubLevel) destinationContainer.allocateNewSubLevel(pose);
             copy.updateLastPose(); //to avoid massive jumps
@@ -79,7 +80,7 @@ public class SubLevelWarper {
         for (SubLevel subLevel : compoundSubLevel) {
             ServerLevelPlot plot = subLevelPlots.get(subLevel.getUniqueId());
             //copy data to plot in other dimension
-            SubLevelTemplate.load(plot, subLevelTags.get(subLevel.getUniqueId()), oldToNew); //modifies nbt data with custom block entity accessors
+            SubLevelTemplate.load(plot, subLevelTags.get(subLevel.getUniqueId()), oldToNew, Pair.of(new Vector3d(center),new Vector3d(position))); //modifies nbt data with custom block entity accessors
 
             if (subLevel.getName() != null)
                 plot.getSubLevel().setName(subLevel.getName());

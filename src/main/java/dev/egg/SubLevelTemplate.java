@@ -35,6 +35,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.ticks.LevelChunkTicks;
+import org.joml.Vector3d;
 
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -151,7 +152,9 @@ public record SubLevelTemplate(CompoundTag plotTag) {
         return tag;
     }
 
-    public static void load(ServerLevelPlot destinationPlot, final CompoundTag tag, HashMap<UUID, Pair<UUID, Vec3i>> oldToNew) {
+    public static void load(ServerLevelPlot destinationPlot, final CompoundTag tag, HashMap<UUID, Pair<UUID, Vec3i>> oldToNew, final Pair<Vector3d,Vector3d> translation) {
+        DimensionalSable.LOGGER.info(translation.second.x + " " + translation.second.y + " " + translation.second.z);
+
         LevelPlotAccessor accessor = (LevelPlotAccessor) destinationPlot;
         ServerLevelPlotAccessor accessor1 = (ServerLevelPlotAccessor) destinationPlot;
         LevelLightEngine lightEngine = accessor1.dimensionalsable$getLightEngine();
@@ -279,7 +282,7 @@ public record SubLevelTemplate(CompoundTag plotTag) {
                 CompoundTag blockEntityTag = blockEntitiesTag.getCompound(i).copy();
 
                 //this is where we modify the block entity tag
-                blockEntityTag = BlockEntityRegistry.modifyNBT(blockEntityTag, oldToNew);
+                blockEntityTag = BlockEntityRegistry.modifyNBT(blockEntityTag, oldToNew, translation);
 
                 final boolean keepBlockEntityPacked = blockEntityTag.getBoolean("keepPacked");
                 BlockPos offset = BlockEntity.getPosFromTag(blockEntityTag);
