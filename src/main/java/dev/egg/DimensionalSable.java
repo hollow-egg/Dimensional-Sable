@@ -26,6 +26,7 @@ public class DimensionalSable {
         if (ModList.get().isLoaded("simulated")) {
             BlockEntityRegistry.PublishBlockEntityAccessor("simulated:spring", new SpringBlockEntity());
             BlockEntityRegistry.PublishBlockEntityAccessor("simulated:rope_connector", new RopeConnectorBlockEntity());
+            BlockEntityRegistry.PublishBlockEntityAccessor("simulated:rope_winch", new RopeConnectorBlockEntity()); //this has the same nbt as rope connector
         }
     }
 }

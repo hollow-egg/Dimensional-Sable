@@ -1,10 +1,10 @@
 package dev.egg.registries.blockentities;
 
 import com.ibm.icu.impl.Pair;
-import dev.egg.DimensionalSable;
 import dev.egg.registries.BlockEntityAccessor;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.*;
+import org.joml.Vector3d;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -12,7 +12,7 @@ import java.util.UUID;
 public class RopeConnectorBlockEntity extends BlockEntityAccessor {
 
     @Override
-    public CompoundTag modifyNBT(final CompoundTag tag, final HashMap<UUID, Pair<UUID, Vec3i>> oldToNewSubLevelIDMap) {
+    public CompoundTag modifyNBT(final CompoundTag tag, final HashMap<UUID, Pair<UUID, Vec3i>> oldToNewSubLevelIDMap, final Pair<Vector3d,Vector3d> translation) {
 
         if (tag.contains("Strand")) {
             CompoundTag strandTag = tag.getCompound("Strand");
@@ -27,7 +27,7 @@ public class RopeConnectorBlockEntity extends BlockEntityAccessor {
                     // sublevelID
                     if (attachment.contains("subLevelID", Tag.TAG_STRING)) {
                         UUID old = UUID.fromString(attachment.getString("subLevelID"));
-                        var mapped = oldToNewSubLevelIDMap.get(old);
+                        Pair<UUID,Vec3i> mapped = oldToNewSubLevelIDMap.get(old);
 
                         if (mapped != null) {
                             if (attachment.contains("blockAttachment")) {
@@ -47,6 +47,25 @@ public class RopeConnectorBlockEntity extends BlockEntityAccessor {
 
                 strandTag.put("blockAttachment", attachments);
             }
+            if (strandTag.contains("points", Tag.TAG_LIST)) {
+                ListTag points = strandTag.getList("points", Tag.TAG_LIST);
+
+                for (int i = 0; i < points.size(); i++) {
+                    ListTag point = points.getList(i);
+
+                    double x = point.getDouble(0) - translation.first.x + translation.second.x;
+                    double y = point.getDouble(1) - translation.first.y + translation.second.y;
+                    double z = point.getDouble(2) - translation.first.z + translation.second.z;
+
+                    point.setTag(0, DoubleTag.valueOf(x));
+                    point.setTag(1, DoubleTag.valueOf(y));
+                    point.setTag(2, DoubleTag.valueOf(z));
+
+                    points.setTag(i, point);
+                }
+                strandTag.put("points", points);
+            }
+
             tag.put("Strand", strandTag);
         }
 
