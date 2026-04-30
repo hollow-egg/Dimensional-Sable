@@ -13,6 +13,7 @@ public class SpringBlockEntity extends BlockEntityAccessor{
     @Override
     public CompoundTag modifyNBT(final CompoundTag tag, final HashMap<UUID,Pair<UUID,Vec3i>> oldToNewSubLevelIDMap) {
 
+        //this one was fairly easy, so I did it first. I recommend using it as an example for making any new block entity accessors
         if (tag.hasUUID("GoalSubLevel")) {
             var newGoal = oldToNewSubLevelIDMap.get(tag.getUUID("GoalSubLevel"));
             if (newGoal != null) {

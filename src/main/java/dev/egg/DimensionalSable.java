@@ -2,6 +2,7 @@ package dev.egg;
 
 import com.mojang.logging.LogUtils;
 import dev.egg.registries.BlockEntityRegistry;
+import dev.egg.registries.blockentities.RopeConnectorBlockEntity;
 import dev.egg.registries.blockentities.SpringBlockEntity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -24,6 +25,7 @@ public class DimensionalSable {
 
         if (ModList.get().isLoaded("simulated")) {
             BlockEntityRegistry.PublishBlockEntityAccessor("simulated:spring", new SpringBlockEntity());
+            BlockEntityRegistry.PublishBlockEntityAccessor("simulated:rope_connector", new RopeConnectorBlockEntity());
         }
     }
 }

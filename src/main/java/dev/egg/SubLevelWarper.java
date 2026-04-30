@@ -1,36 +1,18 @@
 package dev.egg;
 
 import com.ibm.icu.impl.Pair;
-import dev.egg.mixin.LevelPlotAccessor;
-import dev.egg.mixin.ServerLevelPlotAccessor;
-import dev.egg.registries.BlockEntityRegistry;
 import dev.ryanhcode.sable.api.SubLevelHelper;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.companion.math.Pose3d;
-import dev.ryanhcode.sable.platform.SablePlotPlatform;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.SubLevel;
-import dev.ryanhcode.sable.sublevel.plot.PlotChunkHolder;
 import dev.ryanhcode.sable.sublevel.plot.ServerLevelPlot;
-import dev.ryanhcode.sable.sublevel.plot.SubLevelPlayerChunkSender;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
-import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.SectionPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.server.level.ChunkLevel;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.chunk.LevelChunkSection;
-import net.minecraft.world.level.lighting.LevelLightEngine;
 import org.joml.Vector3d;
 
 import java.util.Collection;
@@ -88,8 +70,6 @@ public class SubLevelWarper {
             Vec3i start = serverSubLevel.getPlot().getCenterBlock().offset(0, sourceContainer.getLevel().dimensionType().minY(), 0);
             Vec3i end = copy.getPlot().getCenterBlock().offset(0, destinationContainer.getLevel().dimensionType().minY(), 0);
             Vec3i offset = end.subtract(start);
-
-            DimensionalSable.LOGGER.info(start.toString() + " -> " + end.toString() + " = " + offset.toString());
 
             oldToNew.put(subLevel.getUniqueId(), Pair.of(copy.getUniqueId(), offset));
             subLevelPlots.put(subLevel.getUniqueId(), copy.getPlot());
