@@ -1,8 +1,10 @@
 package dev.egg;
 
+import com.ibm.icu.impl.Pair;
 import com.mojang.serialization.Codec;
 import dev.egg.mixin.LevelPlotAccessor;
 import dev.egg.mixin.ServerLevelPlotAccessor;
+import dev.egg.registries.BlockEntityRegistry;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
 import dev.ryanhcode.sable.mixinterface.plot.serialization.LevelChunkTicksExtension;
@@ -12,10 +14,7 @@ import dev.ryanhcode.sable.sublevel.plot.PlotChunkHolder;
 import dev.ryanhcode.sable.sublevel.plot.ServerLevelPlot;
 import dev.ryanhcode.sable.sublevel.plot.SubLevelPlayerChunkSender;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
-import net.minecraft.core.SectionPos;
+import net.minecraft.core.*;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.*;
@@ -38,7 +37,9 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.ticks.LevelChunkTicks;
 
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 //modified from
 //Copyright (c) 2025 KyanBirb (sable touys)
@@ -69,7 +70,7 @@ public record SubLevelTemplate(CompoundTag plotTag) {
         final ServerLevel level = plot.getSubLevel().getLevel();
 
         int minY = level.dimensionType().minY();
-        final BlockPos center = plot.getCenterBlock().offset(0,-minY,0); // minY accounts for the different starting y levels a dimension can have (overworld is -64, nether is 0)
+        final BlockPos center = plot.getCenterBlock().offset(0,minY,0); // minY accounts for the different starting y levels a dimension can have (overworld is -64, nether is 0)
 
         final CompoundTag chunks = new CompoundTag();
         for (final PlotChunkHolder chunkHolder : plot.getLoadedChunks()) {
@@ -150,7 +151,7 @@ public record SubLevelTemplate(CompoundTag plotTag) {
         return tag;
     }
 
-    public static void load(ServerLevelPlot destinationPlot, final CompoundTag tag) {
+    public static void load(ServerLevelPlot destinationPlot, final CompoundTag tag, HashMap<UUID, Pair<UUID, Vec3i>> oldToNew) {
         LevelPlotAccessor accessor = (LevelPlotAccessor) destinationPlot;
         ServerLevelPlotAccessor accessor1 = (ServerLevelPlotAccessor) destinationPlot;
         LevelLightEngine lightEngine = accessor1.dimensionalsable$getLightEngine();
@@ -275,7 +276,11 @@ public record SubLevelTemplate(CompoundTag plotTag) {
 
             // Add block entities
             for (int i = 0; i < blockEntitiesTag.size(); i++) {
-                final CompoundTag blockEntityTag = blockEntitiesTag.getCompound(i).copy();
+                CompoundTag blockEntityTag = blockEntitiesTag.getCompound(i).copy();
+
+                //this is where we modify the block entity tag
+                blockEntityTag = BlockEntityRegistry.modifyNBT(blockEntityTag, oldToNew);
+
                 final boolean keepBlockEntityPacked = blockEntityTag.getBoolean("keepPacked");
                 BlockPos offset = BlockEntity.getPosFromTag(blockEntityTag);
                 BlockPos pos = center.offset(offset);
