@@ -50,11 +50,6 @@ public record SubLevelTemplate(CompoundTag plotTag) {
             Block.BLOCK_STATE_REGISTRY, BlockState.CODEC, PalettedContainer.Strategy.SECTION_STATES, Blocks.AIR.defaultBlockState()
     );
 
-    public static final Codec<SubLevelTemplate> CODEC = CompoundTag.CODEC.xmap(
-            SubLevelTemplate::new,
-            SubLevelTemplate::plotTag
-    );
-
     public static CompoundTag save(ServerLevelPlot plot) {
         LevelPlotAccessor accessor = (LevelPlotAccessor) plot;
         ServerLevelPlotAccessor accessor1 = (ServerLevelPlotAccessor) plot;
