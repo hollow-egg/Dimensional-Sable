@@ -153,8 +153,6 @@ public record SubLevelTemplate(CompoundTag plotTag) {
     }
 
     public static void load(ServerLevelPlot destinationPlot, final CompoundTag tag, HashMap<UUID, Pair<UUID, Vec3i>> oldToNew, final Pair<Vector3d,Vector3d> translation) {
-        DimensionalSable.LOGGER.info(translation.second.x + " " + translation.second.y + " " + translation.second.z);
-
         LevelPlotAccessor accessor = (LevelPlotAccessor) destinationPlot;
         ServerLevelPlotAccessor accessor1 = (ServerLevelPlotAccessor) destinationPlot;
         LevelLightEngine lightEngine = accessor1.dimensionalsable$getLightEngine();
