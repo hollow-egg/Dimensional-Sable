@@ -4,11 +4,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
-import dev.ryanhcode.sable.api.command.SableCommandHelper;
 import dev.ryanhcode.sable.api.command.SubLevelArgumentType;
-import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.DimensionArgument;
@@ -22,7 +18,6 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import java.util.*;
 
 import static dev.egg.SubLevelWarper.WarpSubLevel;
-import static dev.ryanhcode.sable.api.command.SableCommandHelper.requireNotNull;
 
 public class Commands {
     @SubscribeEvent
@@ -44,12 +39,6 @@ public class Commands {
             BlockPos position = BlockPosArgument.getBlockPos(ctx, "position");
 
             CommandSourceStack source = ctx.getSource();
-            final ServerSubLevelContainer sourcePlotContainer = SableCommandHelper.requireSubLevelContainer(source);
-            final ServerSubLevelContainer destinationPlotContainer = requireNotNull(Objects.requireNonNull(SubLevelContainer.getContainer(dimension)), new SimpleCommandExceptionType(Component.literal("Invalid Dimension!")));
-
-            //if (sourcePlotContainer.equals(destinationPlotContainer)) //same dimension
-                //return Command.SINGLE_SUCCESS;
-
             ServerSubLevel sublevel = SubLevelArgumentType.getSingleSubLevel(ctx, "sub_level");
 
             int warpCount = WarpSubLevel(sublevel, dimension, position);
