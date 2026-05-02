@@ -77,7 +77,8 @@ public class SubLevelWarper {
             DimensionalSable.LOGGER.info("FIX: " + blockFixOffset.getX() + " " + blockFixOffset.getY() + " " + blockFixOffset.getZ());
 
             pose.position().add(pose.orientation().transform(new Vector3d(blockFixOffset.getX() + 0.5, blockFixOffset.getY() + 0.5, blockFixOffset.getZ() + 0.5)));
-            pose.position().sub(pose.orientation().transform(new Vector3d(boundingBox.width()/2.0, boundingBox.height()/2.0, boundingBox.length()/2.0)));
+            pose.position().sub(pose.orientation().transform(new Vector3d((boundingBox.width()%16)/2.0, (boundingBox.height()%16)/2.0, (boundingBox.length()%16)/2.0)));
+            pose.position().sub(pose.orientation().transform(new Vector3d((boundingBox.width()/16)*8.0, (boundingBox.height()/16)*8.0, (boundingBox.length()/16)*8.0)));
 
             ServerSubLevel copy = (ServerSubLevel) destinationContainer.allocateNewSubLevel(pose);
             subLevelTags.put(subLevel.getUniqueId(), tag);
