@@ -99,8 +99,6 @@ public class SubLevelWarper {
 
             if (subLevel.getName() != null)
                 plot.getSubLevel().setName(subLevel.getName());
-
-            DimensionalSable.LOGGER.info("POS: " + plot.getSubLevel().logicalPose().position().x + " " + plot.getSubLevel().logicalPose().position().y + " " + plot.getSubLevel().logicalPose().position().z);
         }
 
         //delete old sublevels
@@ -129,7 +127,6 @@ public class SubLevelWarper {
                         for (int yOff = 0; yOff < 16; yOff++) {
                             for (int zOff = 0; zOff < 16; zOff++) {
                                 final BlockState state = section.getBlockState(xOff, yOff, zOff);
-
                                 if (!state.isAir()) {
                                     return new BlockPos(xOff, yOff, zOff);
                                 }

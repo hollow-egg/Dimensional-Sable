@@ -2,6 +2,7 @@ package dev.egg;
 
 import com.mojang.logging.LogUtils;
 import dev.egg.registries.BlockEntityRegistry;
+import dev.egg.registries.blockentities.DockingConnectorBlockEntity;
 import dev.egg.registries.blockentities.RopeConnectorBlockEntity;
 import dev.egg.registries.blockentities.SpringBlockEntity;
 import net.neoforged.bus.api.IEventBus;
@@ -27,6 +28,7 @@ public class DimensionalSable {
             BlockEntityRegistry.PublishBlockEntityAccessor("simulated:spring", new SpringBlockEntity());
             BlockEntityRegistry.PublishBlockEntityAccessor("simulated:rope_connector", new RopeConnectorBlockEntity());
             BlockEntityRegistry.PublishBlockEntityAccessor("simulated:rope_winch", new RopeConnectorBlockEntity()); //this has the same nbt as rope connector
+            BlockEntityRegistry.PublishBlockEntityAccessor("simulated:docking_connector", new DockingConnectorBlockEntity());
         }
     }
 }
