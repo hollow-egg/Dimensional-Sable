@@ -45,7 +45,7 @@ public class DimensionalSable {
             BlockEntityRegistry.PublishCustomFixer("create","mechanical_bearing", new BearingBlockEntity());
             BlockEntityRegistry.PublishCustomFixer("create","windmill_bearing", new BearingBlockEntity());
             BlockEntityRegistry.PublishCustomFixer("create","clockwork_bearing", new BearingBlockEntity());
-            BlockEntityRegistry.PublishCustomFixer("create","mechanical_piston", new MechanicalPistonBlockEntity());
+            BlockEntityRegistry.PublishCustomFixer("create","mechanical_piston", new MechanicalPistonBlockEntity()); //currently places in the wrong position, gotta fix that
             //block entities with "Source", this is taken from the Create github
             //Copyright (c) The Create Team / The Creators of Create
             BlockEntityRegistry.PublishCompoundPosFixer("create", Set.of("adjustable_chain_gearshift", "backtank", "belt", "clockwork_bearing", "clutch", "cuckoo_clock",
@@ -61,13 +61,14 @@ public class DimensionalSable {
             BlockEntityRegistry.PublishCompoundPosFixer("create", Set.of("item_vault", "fluid_tank"), Set.of("LastKnownPos", "Controller"));
             BlockEntityRegistry.PublishPosFixer("create", "display_link", Set.of("TargetOffset")); //TODO gotta figure out the display link logic
             BlockEntityRegistry.PublishCompoundPosFixer("create", Set.of("drill", "saw"), Set.of("Breaking"));
-            BlockEntityRegistry.PublishCompoundPosFixer("create", Set.of("rope_pulley", "elevator_pulley"), Set.of("MirrorChildren"));
+            BlockEntityRegistry.PublishCompoundPosFixer("create", Set.of("rope_pulley", "elevator_pulley"), Set.of("MirrorChildren")); //not sure if this is everything I need to do
             BlockEntityRegistry.PublishPosFixer("create", "powered_shaft", Set.of("EnginePos"));
         }
         if (ModList.get().isLoaded("aeronautics")) {
             BlockEntityRegistry.PublishCustomFixer("aeronautics","propeller_bearing", new BearingBlockEntity());
             BlockEntityRegistry.PublishCustomFixer("aeronautics","gyroscopic_propeller_bearing", new BearingBlockEntity());
 
+            //not entirely sure how necessary it is to fix "Source", but I'm doing it anyway
             BlockEntityRegistry.PublishCompoundPosFixer("aeronautics", Set.of("propeller_bearing", "gyroscopic_propeller_bearing",
                     "smart_propeller", "wooden_propeller", "andesite_propeller"
             ), Set.of("Source"));
