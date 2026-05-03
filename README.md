@@ -1,12 +1,19 @@
-An addon to the Sable Mod that should allow for teleporting sublevels across dimensions!
+An addon to the Sable Mod that allows for teleporting sublevels across dimensions!
 
-Hopefully maybe. [VERY WIP, USE AT YOUR OWN RISK] 
+[WIP, USE AT YOUR OWN RISK] 
 
-Currently supported block entities:
-- Simulated:
-  - Springs
-  - Rope Connectors
-  - Rope Winches
+The command to warp a sublevel is /sable dimension_set ...
+
+But this is mainly here to be used as an api for other mods (including some I have in the works)
+
+Currently, these block entities are known to have broken/unknown behavior after a teleportation: (PLEASE REPORT ANY MORE YOU FIND!)
+- Display Link
+- Mechanical Piston (and sticky ofc)
+
+Goals:
+- Make create contraptions properly teleport instead of disassembling
+- Teleport entities riding the sublevel
+- Destroy any blocks that are connecting the sublevel to the ground (or fail instead)
 
 If you want to contribute, hit me up on discord. Username is hollow_egg.
 If you just want to steal the (very bad) code, you can do that too ^-^
