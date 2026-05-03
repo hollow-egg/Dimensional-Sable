@@ -62,6 +62,7 @@ public record SubLevelTemplate(CompoundTag plotTag) {
         tag.putInt("log_size", accessor.dimensionalsable$getLogSize());
         tag.putString("biome", accessor.dimensionalsable$getBiome().location().toString());
         tag.putInt("data_version", DATA_VERSION);
+        tag.putUUID("SubLevelID", plot.getSubLevel().getUniqueId());
 
         final ServerLevel level = plot.getSubLevel().getLevel();
 
@@ -147,7 +148,7 @@ public record SubLevelTemplate(CompoundTag plotTag) {
         return tag;
     }
 
-    public static void load(ServerLevelPlot destinationPlot, final CompoundTag tag, HashMap<UUID, Pair<UUID, Vec3i>> oldToNew, final Pair<Vector3d,Vector3d> translation) {
+    public static void load(ServerLevelPlot destinationPlot, final CompoundTag tag, final BlockEntityRegistry.MoveInfo moveInfo) {
         LevelPlotAccessor accessor = (LevelPlotAccessor) destinationPlot;
         ServerLevelPlotAccessor accessor1 = (ServerLevelPlotAccessor) destinationPlot;
         LevelLightEngine lightEngine = accessor1.dimensionalsable$getLightEngine();
@@ -275,7 +276,7 @@ public record SubLevelTemplate(CompoundTag plotTag) {
                 CompoundTag blockEntityTag = blockEntitiesTag.getCompound(i).copy();
 
                 //this is where we modify the block entity tag
-                blockEntityTag = BlockEntityRegistry.modifyNBT(blockEntityTag, oldToNew, translation);
+                blockEntityTag = BlockEntityRegistry.modifyNBT(new BlockEntityRegistry.BlockEntityInfo(blockEntityTag, tag.getUUID("SubLevelID"),moveInfo));
 
                 final boolean keepBlockEntityPacked = blockEntityTag.getBoolean("keepPacked");
                 BlockPos offset = BlockEntity.getPosFromTag(blockEntityTag);

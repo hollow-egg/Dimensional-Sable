@@ -1,7 +1,10 @@
 package dev.egg;
 
 import com.ibm.icu.impl.Pair;
+import com.simibubi.create.content.contraptions.AbstractContraptionEntity;
+import dev.egg.registries.BlockEntityRegistry;
 import dev.ryanhcode.sable.api.SubLevelHelper;
+import dev.ryanhcode.sable.api.sublevel.KinematicContraption;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.companion.math.Pose3d;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
@@ -54,6 +57,9 @@ public class SubLevelWarper {
 
             ServerSubLevel serverSubLevel = (ServerSubLevel) subLevel;
 
+            for(KinematicContraption contraption : serverSubLevel.getPlot().getContraptions())
+                ((AbstractContraptionEntity) contraption).disassemble();
+
             //save sublevel data
             CompoundTag tag = SubLevelTemplate.save(serverSubLevel.getPlot());
             //allocate
@@ -68,7 +74,7 @@ public class SubLevelWarper {
             Vec3i end = copy.getPlot().getCenterBlock().offset(0, destinationContainer.getLevel().dimensionType().minY(), 0);
             Vec3i offset = end.subtract(start);
 
-            oldToNew.put(subLevel.getUniqueId(), Pair.of(copy.getUniqueId(), offset));
+            oldToNew.put(subLevel.getUniqueId(), Pair.of(copy.getUniqueId(),offset));
             subLevelPlots.put(subLevel.getUniqueId(), copy.getPlot());
         }
 
@@ -78,7 +84,14 @@ public class SubLevelWarper {
             ServerLevelPlot plot = subLevelPlots.get(subLevel.getUniqueId());
             //copy data to plot in other dimension
             Pose3d pose = new Pose3d(plot.getSubLevel().logicalPose());
-            SubLevelTemplate.load(plot, subLevelTags.get(subLevel.getUniqueId()), oldToNew, Pair.of(new Vector3d(center),new Vector3d(position))); //modifies nbt data with custom block entity accessors
+            //modifies nbt data with custom block entity accessors
+            SubLevelTemplate.load(plot, subLevelTags.get(subLevel.getUniqueId()),
+                    new BlockEntityRegistry.MoveInfo(
+                            oldToNew,
+                            new Vector3d(position).sub(center),
+                            sourceContainer.getLevel().dimension().location().getPath(),
+                            destinationContainer.getLevel().dimension().location().getPath()));
+
             physics.getPipeline().teleport(plot.getSubLevel(), pose.position(), pose.orientation());
 
             if (subLevel.getName() != null)
