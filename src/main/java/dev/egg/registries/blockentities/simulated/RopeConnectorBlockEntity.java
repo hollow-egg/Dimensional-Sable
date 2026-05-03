@@ -1,7 +1,8 @@
-package dev.egg.registries.blockentities;
+package dev.egg.registries.blockentities.simulated;
 
 import com.ibm.icu.impl.Pair;
 import dev.egg.registries.BlockEntityAccessor;
+import dev.egg.registries.BlockEntityRegistry;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.*;
 import org.joml.Vector3d;
@@ -12,10 +13,10 @@ import java.util.UUID;
 public class RopeConnectorBlockEntity extends BlockEntityAccessor {
 
     @Override
-    public CompoundTag modifyNBT(final CompoundTag tag, final HashMap<UUID, Pair<UUID, Vec3i>> oldToNewSubLevelIDMap, final Pair<Vector3d,Vector3d> translation) {
+    public CompoundTag modifyNBT(final BlockEntityRegistry.BlockEntityInfo info) {
 
-        if (tag.contains("Strand")) {
-            CompoundTag strandTag = tag.getCompound("Strand");
+        if (info.tag().contains("Strand")) {
+            CompoundTag strandTag = info.tag().getCompound("Strand");
 
             // attachments
             if (strandTag.contains("attachments", Tag.TAG_LIST)) {
@@ -27,7 +28,7 @@ public class RopeConnectorBlockEntity extends BlockEntityAccessor {
                     // sublevelID
                     if (attachment.contains("subLevelID", Tag.TAG_STRING)) {
                         UUID old = UUID.fromString(attachment.getString("subLevelID"));
-                        Pair<UUID,Vec3i> mapped = oldToNewSubLevelIDMap.get(old);
+                        Pair<UUID,Vec3i> mapped = info.moveInfo().oldToNewSubLevelMap().get(old);
 
                         if (mapped != null) {
                             if (attachment.contains("blockAttachment")) {
@@ -53,9 +54,9 @@ public class RopeConnectorBlockEntity extends BlockEntityAccessor {
                 for (int i = 0; i < points.size(); i++) {
                     ListTag point = points.getList(i);
 
-                    double x = point.getDouble(0) - translation.first.x + translation.second.x;
-                    double y = point.getDouble(1) - translation.first.y + translation.second.y;
-                    double z = point.getDouble(2) - translation.first.z + translation.second.z;
+                    double x = point.getDouble(0) + info.moveInfo().translationOffset().x;
+                    double y = point.getDouble(1) + info.moveInfo().translationOffset().y;
+                    double z = point.getDouble(2) + info.moveInfo().translationOffset().z;
 
                     point.setTag(0, DoubleTag.valueOf(x));
                     point.setTag(1, DoubleTag.valueOf(y));
@@ -66,9 +67,9 @@ public class RopeConnectorBlockEntity extends BlockEntityAccessor {
                 strandTag.put("points", points);
             }
 
-            tag.put("Strand", strandTag);
+            info.tag().put("Strand", strandTag);
         }
 
-        return tag;
+        return info.tag();
     }
 }
