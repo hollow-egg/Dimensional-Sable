@@ -6,9 +6,11 @@ The command to warp a sublevel is /sable dimension_set ...
 
 But this is mainly here to be used as an api for other mods (including some I have in the works)
 
-Currently, these block entities are known to have broken/unknown behavior after a teleportation: (PLEASE REPORT ANY MORE YOU FIND!)
+Currently, these block/entities are known to have broken/unknown behavior after a teleportation: (PLEASE REPORT ANY MORE YOU FIND!)
 - Display Link
 - Mechanical Piston (and sticky ofc)
+- Paintings
+- Any passengers (seats)
 
 Goals:
 - Make create contraptions properly teleport instead of disassembling
