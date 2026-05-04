@@ -1,11 +1,9 @@
 package dev.egg;
 
-import com.ibm.icu.impl.Pair;
 import com.mojang.logging.LogUtils;
-import com.mojang.serialization.Dynamic;
 import dev.egg.registries.BlockEntityRegistry;
 import dev.egg.registries.blockentities.create.MechanicalPistonBlockEntity;
-import dev.egg.registries.blockentities.offroad.BearingBlockEntity;
+import dev.egg.registries.blockentities.create.BearingBlockEntity;
 import dev.egg.registries.blockentities.simulated.*;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -14,9 +12,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
-import java.util.Optional;
 import java.util.Set;
-import java.util.stream.IntStream;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(DimensionalSable.MODID)
@@ -28,7 +24,8 @@ public class DimensionalSable {
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
     public DimensionalSable(IEventBus modEventBus, ModContainer modContainer) {
         final IEventBus neoBus = NeoForge.EVENT_BUS;
-        neoBus.addListener(dev.egg.Commands::registerCommands);
+        neoBus.addListener(Commands::registerCommands);
+        neoBus.addListener(SubLevelLockManager::onLevelTick);
 
         if (ModList.get().isLoaded("simulated")) {
 

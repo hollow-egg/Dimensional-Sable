@@ -5,6 +5,7 @@ import com.simibubi.create.content.contraptions.AbstractContraptionEntity;
 import dev.egg.registries.BlockEntityRegistry;
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.api.SubLevelHelper;
+import dev.ryanhcode.sable.api.physics.constraint.fixed.FixedConstraintConfiguration;
 import dev.ryanhcode.sable.api.sublevel.KinematicContraption;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.companion.math.Pose3d;
@@ -22,16 +23,29 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3d;
+import org.joml.Vector3fc;
 
 import java.util.*;
 
 public class SubLevelWarper {
 
-    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final BlockPos position)
+    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension)
     {
-        return WarpSubLevel(subLevel, dimension, position, true);
+        return WarpSubLevel(subLevel, dimension, subLevel.logicalPose().position(), 0, true);
     }
-    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final BlockPos position, boolean warpConnected)
+    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final Vector3d position, double lockTime)
+    {
+        return WarpSubLevel(subLevel, dimension, position, lockTime, true);
+    }
+    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final Vector3d position)
+    {
+        return WarpSubLevel(subLevel, dimension, position, 0, true);
+    }
+    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, double lockTime)
+    {
+        return WarpSubLevel(subLevel, dimension, subLevel.logicalPose().position(), lockTime, true);
+    }
+    private static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final Vector3d position, double lockTime, boolean warpConnected)
     {
         ServerSubLevelContainer sourceContainer = ServerSubLevelContainer.getContainer(subLevel.getLevel());
         ServerSubLevelContainer destinationContainer = ServerSubLevelContainer.getContainer((ServerLevel)dimension);
@@ -42,16 +56,14 @@ public class SubLevelWarper {
         else
             subLevels = Set.of(subLevel);
 
-        final Vector3d center = (Vector3d) subLevel.logicalPose().position();
-        final Vector3d pos = new Vector3d(position.getX(), position.getY() + 0.5, position.getZ());
-
-        WarpSubLevels(subLevels, sourceContainer, destinationContainer, center, pos);
+        final Vector3d center = subLevel.logicalPose().position();
+        WarpSubLevels(subLevels, sourceContainer, destinationContainer, center, position, lockTime);
 
         return subLevels.size();
     }
 
     //this function is *basically* the same as the clone command from sable
-    private static void WarpSubLevels(final Collection<SubLevel> compoundSubLevel, final ServerSubLevelContainer sourceContainer, final ServerSubLevelContainer destinationContainer, final Vector3d center, final Vector3d position) {
+    private static void WarpSubLevels(final Collection<SubLevel> compoundSubLevel, final ServerSubLevelContainer sourceContainer, final ServerSubLevelContainer destinationContainer, final Vector3d center, final Vector3d position, final double lockTime) {
 
         HashMap<UUID,Pair<UUID,Vec3i>> oldToNew = new HashMap<>();
         HashMap<UUID,CompoundTag> subLevelTags = new HashMap<>();
@@ -69,11 +81,10 @@ public class SubLevelWarper {
             AABB box = new AABB(-boxX/2 + center.x, -boxY/2 + center.y, -boxZ/2 + center.z, boxX/2 + center.x, boxY/2 + center.y, boxZ/2 + center.z);
             box.inflate(1.0);
 
-            DimensionalSable.LOGGER.info(box.toString());
-
             List<Entity> candidates = sourceContainer.getLevel().getEntities(null, box);
             visitedEntities.put(subLevel.getUniqueId(), new HashSet<>(candidates));
 
+            //currently, my solution for contraptions is to disassemble them. I'm looking into other options
             for(KinematicContraption contraption : serverSubLevel.getPlot().getContraptions())
                 ((AbstractContraptionEntity) contraption).disassemble();
 
@@ -95,7 +106,7 @@ public class SubLevelWarper {
             subLevelPlots.put(subLevel.getUniqueId(), copy.getPlot());
         }
 
-        Set<Entity> movedEntities = new HashSet<>();
+        Set<Entity> visited = new HashSet<>();
         var physics = SubLevelPhysicsSystem.get(destinationContainer.getLevel());
         //load tags now that we have new plots and offsets
         for (SubLevel subLevel : compoundSubLevel) {
@@ -112,41 +123,48 @@ public class SubLevelWarper {
                             destinationContainer.getLevel().dimension().location().getPath()));
 
             physics.getPipeline().teleport(copy, pose.position(), pose.orientation());
+            if (lockTime > 0)
+                SubLevelLockManager.AddLock(copy, lockTime); //freezes sublevels for "lockTime" seconds to allow for things to catch up
 
             if (subLevel.getName() != null)
                 copy.setName(subLevel.getName());
 
             //hopefully teleport entities
             for(Entity entity : visitedEntities.get(subLevel.getUniqueId())) {
-                if (movedEntities.contains(entity))continue;
-                movedEntities.add(entity);
+                if (entity.isPassenger() || visited.contains(entity)) continue; //don't teleport passengers, rely on the base entity
 
                 SubLevel tracking = Sable.HELPER.getTrackingOrVehicleSubLevel(entity);
-                DimensionalSable.LOGGER.info(entity.toString());
 
-//                if (tracking == subLevel) {
-//                    var centerBlock = ((ServerSubLevel)subLevel).getPlot().getCenterBlock();
-//                    var relativePos = entity.position().subtract(Vec3.atLowerCornerOf(centerBlock));
-//                    var newSubLevelPos = Vec3.atLowerCornerOf(copy.getPlot().getCenterBlock());
-//                    entity.teleportTo(copy.getLevel(),
-//                            newSubLevelPos.x + relativePos.x,
-//                            newSubLevelPos.y + relativePos.y,
-//                            newSubLevelPos.z + relativePos.z,
-//                            Set.of(),
-//                            entity.getYRot(),
-//                            entity.getXRot());
-//                }
-//                else {
-                    var offset = new Vector3d(position).sub(center);
-                    entity.teleportTo(plot.getSubLevel().getLevel(),
+                var offset = new Vector3d(position).sub(center);
+                if (tracking == subLevel) {
+                    visited.add(entity);
+                    DimensionalSable.LOGGER.info("TRACKED: " + entity.toString());
+
+                    entity.teleportTo(destinationContainer.getLevel(),
                             entity.position().x + offset.x,
                             entity.position().y + offset.y,
                             entity.position().z + offset.z,
                             Set.of(),
                             entity.getYRot(),
                             entity.getXRot());
-                //}
-                DimensionalSable.LOGGER.info(entity.toString());
+
+                    DimensionalSable.LOGGER.info("TRACKED NEW: "+entity.toString());
+                }
+                else if(tracking == null) {
+                    visited.add(entity);
+                    DimensionalSable.LOGGER.info("UNTRACKED: " + entity.toString());
+
+                    var pos = Sable.HELPER.projectOutOfSubLevel(sourceContainer.getLevel(), entity.position());
+                    entity.teleportTo(destinationContainer.getLevel(),
+                            pos.x + offset.x,
+                            pos.y + offset.y,
+                            pos.z + offset.z,
+                            Set.of(),
+                            entity.getYRot(),
+                            entity.getXRot());
+
+                    DimensionalSable.LOGGER.info("UNTRACKED NEW: "+entity.toString());
+                }
             }
         }
 

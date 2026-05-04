@@ -23,7 +23,7 @@ public class PosBlockEntityAccessor extends BlockEntityAccessor {
                 info.tag().putIntArray(tag, new int[]{pos.getX(),pos.getY(),pos.getZ()});
             }
             else
-                DimensionalSable.LOGGER.warn("[PosBlockEntityAccessor] Invalid tag: " + tag);
+                DimensionalSable.LOGGER.warn("[PosBlockEntityAccessor] " + info.tag().get("id") + " Invalid tag: " + tag);
         }
         return info.tag();
     }

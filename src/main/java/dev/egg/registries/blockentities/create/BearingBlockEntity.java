@@ -1,4 +1,4 @@
-package dev.egg.registries.blockentities.offroad;
+package dev.egg.registries.blockentities.create;
 
 import dev.egg.registries.BlockEntityAccessor;
 import dev.egg.registries.BlockEntityRegistry;
