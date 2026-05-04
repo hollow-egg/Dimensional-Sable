@@ -1,3 +1,5 @@
+ <img width="128" height="128" alt="DimensionalSableIcon" src="https://github.com/user-attachments/assets/dee820d1-99f8-4836-a6a5-f2a1b7a05081" />
+
 An addon to the Sable Mod that allows for teleporting sublevels across dimensions!
 
 [WIP, USE AT YOUR OWN RISK] 
