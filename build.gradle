@@ -15,6 +15,19 @@ repositories {
         url = "https://maven.ryanhcode.dev/releases"
     }
     maven { url = "https://maven.neoforged.net/releases" }
+
+    exclusiveContent { // Sable
+        forRepository {
+            maven {
+                url = "https://maven.ryanhcode.dev/releases"
+                name = "RyanHCode Maven"
+            }
+        }
+        filter {
+            includeGroup("dev.ryanhcode.sable")
+            includeGroup("dev.ryanhcode.sable-companion")
+        }
+    }
 }
 
 base {
