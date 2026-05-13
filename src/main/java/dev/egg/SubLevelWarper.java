@@ -5,6 +5,7 @@ import com.simibubi.create.content.contraptions.AbstractContraptionEntity;
 import dev.egg.registries.BlockEntityRegistry;
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.api.SubLevelHelper;
+import dev.ryanhcode.sable.api.entity.EntitySubLevelUtil;
 import dev.ryanhcode.sable.api.physics.constraint.fixed.FixedConstraintConfiguration;
 import dev.ryanhcode.sable.api.sublevel.KinematicContraption;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
@@ -17,6 +18,8 @@ import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
@@ -26,6 +29,9 @@ import org.joml.Vector3d;
 import org.joml.Vector3fc;
 
 import java.util.*;
+
+import static java.lang.Math.floor;
+import static java.lang.Math.round;
 
 public class SubLevelWarper {
 
@@ -107,6 +113,8 @@ public class SubLevelWarper {
         }
 
         Set<Entity> visited = new HashSet<>();
+        HashMap<UUID,UUID> passengerToEntityMap = new HashMap<>();
+        HashMap<UUID,Vector3d> entityToPositionMap = new HashMap<>();
         var physics = SubLevelPhysicsSystem.get(destinationContainer.getLevel());
         //load tags now that we have new plots and offsets
         for (SubLevel subLevel : compoundSubLevel) {
@@ -129,39 +137,25 @@ public class SubLevelWarper {
             if (subLevel.getName() != null)
                 copy.setName(subLevel.getName());
 
-            //hopefully teleport entities
+            //save teleport positions
             for(Entity entity : visitedEntities.get(subLevel.getUniqueId())) {
-                if (entity.isPassenger() || visited.contains(entity)) continue; //don't teleport passengers, rely on the base entity
+                if (visited.contains(entity)) continue;
+                visited.add(entity);
 
-                SubLevel tracking = Sable.HELPER.getTrackingOrVehicleSubLevel(entity);
+                Entity ride = entity.getVehicle();
+                if (ride != null)
+                    passengerToEntityMap.put(entity.getUUID(), ride.getUUID());
 
-                var offset = new Vector3d(position).sub(center);
-                if (tracking == subLevel) {
-                    visited.add(entity);
-
-//                    entity.teleportTo(destinationContainer.getLevel(),
-//                            entity.position().x + offset.x,
-//                            entity.position().y + offset.y,
-//                            entity.position().z + offset.z,
-//                            Set.of(),
-//                            entity.getYRot(),
-//                            entity.getXRot());
-
-                    DimensionalSable.LOGGER.info("TRACKED: "+entity.toString());
+                if (!EntitySubLevelUtil.shouldKick(entity)) { // paintings and other stationary entities
+                    var pos = entity.position();
+                    var offset = oldToNew.get(subLevel.getUniqueId()).second;
+                    entityToPositionMap.put(entity.getUUID(), new Vector3d(pos.x+ offset.getX(),  pos.y+ offset.getY(), pos.z+ offset.getZ()));
                 }
-                else if(tracking == null) {
-                    visited.add(entity);
-
+                else { // all other entities
+                    var offset = new Vector3d(position).sub(center);
                     var pos = Sable.HELPER.projectOutOfSubLevel(sourceContainer.getLevel(), entity.position());
-                    entity.teleportTo(destinationContainer.getLevel(),
-                            pos.x + offset.x,
-                            pos.y + offset.y,
-                            pos.z + offset.z,
-                            Set.of(),
-                            entity.getYRot(),
-                            entity.getXRot());
 
-                    DimensionalSable.LOGGER.info("UNTRACKED: "+entity.toString());
+                    entityToPositionMap.put(entity.getUUID(), new Vector3d(pos.x+ offset.x,  pos.y+ offset.y, pos.z+ offset.z));
                 }
             }
         }
@@ -170,5 +164,35 @@ public class SubLevelWarper {
         for (SubLevel subLevel : compoundSubLevel) {
             sourceContainer.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED);
         }
+
+        //hopefully teleport entities
+        for (UUID id : entityToPositionMap.keySet()) {
+            Entity entity = destinationContainer.getLevel().getEntity(id);
+            if (entity == null) continue;
+
+            var pos = entityToPositionMap.get(id);
+            entity.teleportTo(destinationContainer.getLevel(),
+                    pos.x,
+                    pos.y,
+                    pos.z,
+                    Set.of(),
+                    entity.getYRot(),
+                    entity.getXRot());
+        }
+
+        //put passengers back on their rides (this does not work atm)
+        MinecraftServer server = destinationContainer.getLevel().getServer();
+        server.execute(() -> { // next tick
+            for (UUID id : passengerToEntityMap.keySet()) {
+                Entity entity = destinationContainer.getLevel().getEntity(id);
+                Entity ride = destinationContainer.getLevel().getEntity(passengerToEntityMap.get(id));
+
+                if (entity != null && ride != null) {
+                    entity.startRiding(ride);
+
+                    DimensionalSable.LOGGER.info(entity + " RIDING -> " + ride);
+                }
+            }
+        });
     }
 }
