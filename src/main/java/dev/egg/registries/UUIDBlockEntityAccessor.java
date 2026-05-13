@@ -23,8 +23,6 @@ public class UUIDBlockEntityAccessor extends BlockEntityAccessor {
                     info.tag().putUUID(tag, goalSubLevel);
                 }
             }
-            else
-                DimensionalSable.LOGGER.warn("[UUIDBlockEntityAccessor] " + info.tag().get("id") + " Invalid tag: " + tag);
         }
         return info.tag();
     }

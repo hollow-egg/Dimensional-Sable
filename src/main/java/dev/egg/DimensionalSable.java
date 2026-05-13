@@ -2,6 +2,7 @@ package dev.egg;
 
 import com.mojang.logging.LogUtils;
 import dev.egg.registries.BlockEntityRegistry;
+import dev.egg.registries.blockentities.create.DisplayLinkBlockEntity;
 import dev.egg.registries.blockentities.create.MechanicalPistonBlockEntity;
 import dev.egg.registries.blockentities.create.BearingBlockEntity;
 import dev.egg.registries.blockentities.simulated.*;
@@ -56,7 +57,7 @@ public class DimensionalSable {
 
             BlockEntityRegistry.PublishPosFixer("create","belt", Set.of("Controller"));
             BlockEntityRegistry.PublishCompoundPosFixer("create", Set.of("item_vault", "fluid_tank"), Set.of("LastKnownPos", "Controller"));
-            BlockEntityRegistry.PublishPosFixer("create", "display_link", Set.of("TargetOffset")); //TODO gotta figure out the display link logic
+            BlockEntityRegistry.PublishCustomFixer("create", "display_link", new DisplayLinkBlockEntity());
             BlockEntityRegistry.PublishCompoundPosFixer("create", Set.of("drill", "saw"), Set.of("Breaking"));
             BlockEntityRegistry.PublishCompoundPosFixer("create", Set.of("rope_pulley", "elevator_pulley"), Set.of("MirrorChildren")); //not sure if this is everything I need to do
             BlockEntityRegistry.PublishPosFixer("create", "powered_shaft", Set.of("EnginePos"));
@@ -72,6 +73,7 @@ public class DimensionalSable {
         }
         if (ModList.get().isLoaded("offroad")) {
             BlockEntityRegistry.PublishCustomFixer("offroad","borehead_bearing", new BearingBlockEntity());
+            BlockEntityRegistry.PublishPosFixer("offroad","borehead_bearing", Set.of("Source"));
         }
     }
 }

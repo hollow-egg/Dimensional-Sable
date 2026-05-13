@@ -119,8 +119,8 @@ public class SubLevelWarper {
                     new BlockEntityRegistry.MoveInfo(
                             oldToNew,
                             new Vector3d(position).sub(center),
-                            sourceContainer.getLevel().dimension().location().getPath(),
-                            destinationContainer.getLevel().dimension().location().getPath()));
+                            sourceContainer.getLevel(),
+                            destinationContainer.getLevel()));
 
             physics.getPipeline().teleport(copy, pose.position(), pose.orientation());
             if (lockTime > 0)
@@ -138,21 +138,19 @@ public class SubLevelWarper {
                 var offset = new Vector3d(position).sub(center);
                 if (tracking == subLevel) {
                     visited.add(entity);
-                    //DimensionalSable.LOGGER.info("TRACKED: " + entity.toString());
 
-                    entity.teleportTo(destinationContainer.getLevel(),
-                            entity.position().x + offset.x,
-                            entity.position().y + offset.y,
-                            entity.position().z + offset.z,
-                            Set.of(),
-                            entity.getYRot(),
-                            entity.getXRot());
+//                    entity.teleportTo(destinationContainer.getLevel(),
+//                            entity.position().x + offset.x,
+//                            entity.position().y + offset.y,
+//                            entity.position().z + offset.z,
+//                            Set.of(),
+//                            entity.getYRot(),
+//                            entity.getXRot());
 
-                    //DimensionalSable.LOGGER.info("TRACKED NEW: "+entity.toString());
+                    DimensionalSable.LOGGER.info("TRACKED: "+entity.toString());
                 }
                 else if(tracking == null) {
                     visited.add(entity);
-                    //DimensionalSable.LOGGER.info("UNTRACKED: " + entity.toString());
 
                     var pos = Sable.HELPER.projectOutOfSubLevel(sourceContainer.getLevel(), entity.position());
                     entity.teleportTo(destinationContainer.getLevel(),
@@ -163,7 +161,7 @@ public class SubLevelWarper {
                             entity.getYRot(),
                             entity.getXRot());
 
-                    //DimensionalSable.LOGGER.info("UNTRACKED NEW: "+entity.toString());
+                    DimensionalSable.LOGGER.info("UNTRACKED: "+entity.toString());
                 }
             }
         }

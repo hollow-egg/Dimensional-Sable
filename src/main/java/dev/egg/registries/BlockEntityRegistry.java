@@ -4,6 +4,7 @@ import com.ibm.icu.impl.Pair;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import org.joml.Vector3d;
 
 import java.util.HashMap;
@@ -20,8 +21,8 @@ public class BlockEntityRegistry {
 
     public record MoveInfo(HashMap<UUID,Pair<UUID,Vec3i>> oldToNewSubLevelMap,
                            Vector3d translationOffset,
-                           String oldDimension,
-                           String newDimension){}
+                           ServerLevel oldDimension,
+                           ServerLevel newDimension){}
 
     public static CompoundTag modifyNBT(final BlockEntityInfo info)
     {

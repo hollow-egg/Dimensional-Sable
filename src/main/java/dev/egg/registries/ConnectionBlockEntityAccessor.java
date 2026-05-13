@@ -26,11 +26,7 @@ public class ConnectionBlockEntityAccessor extends BlockEntityAccessor {
                 pos = pos.offset(newSubLevel.second);
                 info.tag().putIntArray(positionTag, new int[]{pos.getX(), pos.getY(), pos.getZ()});
             }
-            else
-                DimensionalSable.LOGGER.warn("[ConnectionBlockEntityAccessor] " + info.tag().get("id") + " Invalid tag: " + positionTag);
         }
-        else
-            DimensionalSable.LOGGER.warn("[ConnectionBlockEntityAccessor] " + info.tag().get("id") + " Invalid tag: " + subLevelTag);
         return info.tag();
     }
 }

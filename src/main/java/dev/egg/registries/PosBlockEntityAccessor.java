@@ -22,8 +22,6 @@ public class PosBlockEntityAccessor extends BlockEntityAccessor {
                 pos = pos.offset(info.moveInfo().oldToNewSubLevelMap().get(info.oldSubLevelID()).second);
                 info.tag().putIntArray(tag, new int[]{pos.getX(),pos.getY(),pos.getZ()});
             }
-            else
-                DimensionalSable.LOGGER.warn("[PosBlockEntityAccessor] " + info.tag().get("id") + " Invalid tag: " + tag);
         }
         return info.tag();
     }
