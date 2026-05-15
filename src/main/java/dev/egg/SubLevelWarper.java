@@ -16,12 +16,15 @@ import dev.ryanhcode.sable.sublevel.plot.ServerLevelPlot;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.decoration.BlockAttachedEntity;
+import net.minecraft.world.entity.decoration.Painting;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -30,8 +33,7 @@ import org.joml.Vector3fc;
 
 import java.util.*;
 
-import static java.lang.Math.floor;
-import static java.lang.Math.round;
+import static java.lang.Math.*;
 
 public class SubLevelWarper {
 
@@ -113,7 +115,6 @@ public class SubLevelWarper {
         }
 
         Set<Entity> visited = new HashSet<>();
-        HashMap<UUID,UUID> passengerToEntityMap = new HashMap<>();
         HashMap<UUID,Vector3d> entityToPositionMap = new HashMap<>();
         var physics = SubLevelPhysicsSystem.get(destinationContainer.getLevel());
         //load tags now that we have new plots and offsets
@@ -142,13 +143,10 @@ public class SubLevelWarper {
                 if (visited.contains(entity)) continue;
                 visited.add(entity);
 
-                Entity ride = entity.getVehicle();
-                if (ride != null)
-                    passengerToEntityMap.put(entity.getUUID(), ride.getUUID());
-
                 if (!EntitySubLevelUtil.shouldKick(entity)) { // paintings and other stationary entities
-                    var pos = entity.position();
+                    var pos = entity.trackingPosition();
                     var offset = oldToNew.get(subLevel.getUniqueId()).second;
+
                     entityToPositionMap.put(entity.getUUID(), new Vector3d(pos.x+ offset.getX(),  pos.y+ offset.getY(), pos.z+ offset.getZ()));
                 }
                 else { // all other entities
@@ -171,6 +169,7 @@ public class SubLevelWarper {
             if (entity == null) continue;
 
             var pos = entityToPositionMap.get(id);
+
             entity.teleportTo(destinationContainer.getLevel(),
                     pos.x,
                     pos.y,
@@ -178,21 +177,8 @@ public class SubLevelWarper {
                     Set.of(),
                     entity.getYRot(),
                     entity.getXRot());
+
+            DimensionalSable.LOGGER.info("Teleported: " + entity.toString());
         }
-
-        //put passengers back on their rides (this does not work atm)
-        MinecraftServer server = destinationContainer.getLevel().getServer();
-        server.execute(() -> { // next tick
-            for (UUID id : passengerToEntityMap.keySet()) {
-                Entity entity = destinationContainer.getLevel().getEntity(id);
-                Entity ride = destinationContainer.getLevel().getEntity(passengerToEntityMap.get(id));
-
-                if (entity != null && ride != null) {
-                    entity.startRiding(ride);
-
-                    DimensionalSable.LOGGER.info(entity + " RIDING -> " + ride);
-                }
-            }
-        });
     }
 }
