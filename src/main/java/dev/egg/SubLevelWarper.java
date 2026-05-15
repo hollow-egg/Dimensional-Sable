@@ -112,6 +112,7 @@ public class SubLevelWarper {
             subLevelPlots.put(subLevel.getUniqueId(), copy.getPlot());
         }
 
+        HashMap<UUID,UUID> entityToPassengerMap = new HashMap<>();
         Set<Entity> visited = new HashSet<>();
         var physics = SubLevelPhysicsSystem.get(destinationContainer.getLevel());
         //load tags now that we have new plots and offsets
@@ -138,6 +139,12 @@ public class SubLevelWarper {
             for(Entity entity : visitedEntities.get(subLevel.getUniqueId())) {
                 if (visited.contains(entity)) continue;
                 visited.add(entity);
+
+                DimensionalSable.LOGGER.info("ENTITY: "+entity.toString());
+                for (Entity passenger : entity.getPassengers()) {
+                    DimensionalSable.LOGGER.info("PASSENGER: " + passenger.toString());
+                    entityToPassengerMap.put(entity.getUUID(), passenger.getUUID());
+                }
 
                 Vector3d newPos;
                 if (!EntitySubLevelUtil.shouldKick(entity)) { // paintings and other stationary entities
@@ -166,6 +173,17 @@ public class SubLevelWarper {
         //delete old sublevels
         for (SubLevel subLevel : compoundSubLevel) {
             sourceContainer.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED);
+        }
+
+        for (UUID ID : entityToPassengerMap.keySet()) {
+            UUID passengerID = entityToPassengerMap.get(ID);
+
+            Entity entity = destinationContainer.getLevel().getEntity(ID);
+            Entity passenger = destinationContainer.getLevel().getEntity(passengerID);
+            if (entity != null && passenger != null) {
+                passenger.startRiding(entity, true);
+                DimensionalSable.LOGGER.info("Made: " + passenger.toString() + " RIDE " + entity.toString());
+            }
         }
     }
 }
