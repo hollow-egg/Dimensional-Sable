@@ -26,7 +26,6 @@ public class DimensionalSable {
     public DimensionalSable(IEventBus modEventBus, ModContainer modContainer) {
         final IEventBus neoBus = NeoForge.EVENT_BUS;
         neoBus.addListener(Commands::registerCommands);
-        neoBus.addListener(SubLevelLockManager::onLevelTick);
 
         if (ModList.get().isLoaded("simulated")) {
 

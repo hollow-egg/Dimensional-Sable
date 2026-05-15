@@ -39,9 +39,7 @@ public class Commands {
                 .then(net.minecraft.commands.Commands.argument("dimension", DimensionArgument.dimension())
                         .executes(DimensionCommand::executeNoPosition)
                 .then(net.minecraft.commands.Commands.argument("position", Vec3Argument.vec3())
-                    .executes(DimensionCommand::executeNoLockTime)
-                .then(net.minecraft.commands.Commands.argument("lock_time", DoubleArgumentType.doubleArg(0))
-                    .executes(DimensionCommand::execute)))))));
+                    .executes(DimensionCommand::execute))))));
         }
         private static int executeNoPosition(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
 
@@ -50,20 +48,7 @@ public class Commands {
             CommandSourceStack source = ctx.getSource();
             ServerSubLevel sublevel = SubLevelArgumentType.getSingleSubLevel(ctx, "sub_level");
 
-            int warpCount = WarpSubLevel(sublevel, dimension, 0);
-
-            source.sendSuccess(()->Component.literal("Teleported " + warpCount + " sublevels to " + dimension.dimension().location().getPath()), false);
-            return Command.SINGLE_SUCCESS;
-        }
-        private static int executeNoLockTime(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-
-            ServerLevel dimension = DimensionArgument.getDimension(ctx, "dimension");
-            Vec3 position = Vec3Argument.getVec3(ctx, "position");
-
-            CommandSourceStack source = ctx.getSource();
-            ServerSubLevel sublevel = SubLevelArgumentType.getSingleSubLevel(ctx, "sub_level");
-
-            int warpCount = WarpSubLevel(sublevel, dimension, new Vector3d(position.x, position.y, position.z), 0);
+            int warpCount = WarpSubLevel(sublevel, dimension);
 
             source.sendSuccess(()->Component.literal("Teleported " + warpCount + " sublevels to " + dimension.dimension().location().getPath()), false);
             return Command.SINGLE_SUCCESS;
@@ -75,9 +60,8 @@ public class Commands {
 
             CommandSourceStack source = ctx.getSource();
             ServerSubLevel sublevel = SubLevelArgumentType.getSingleSubLevel(ctx, "sub_level");
-            double lockTime = DoubleArgumentType.getDouble(ctx, "lock_time");
 
-            int warpCount = WarpSubLevel(sublevel, dimension, new Vector3d(position.x, position.y, position.z), lockTime);
+            int warpCount = WarpSubLevel(sublevel, dimension, new Vector3d(position.x, position.y, position.z));
 
             source.sendSuccess(()->Component.literal("Teleported " + warpCount + " sublevels to " + dimension.dimension().location().getPath()), false);
             return Command.SINGLE_SUCCESS;

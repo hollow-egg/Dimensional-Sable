@@ -9,14 +9,17 @@ import dev.ryanhcode.sable.api.entity.EntitySubLevelUtil;
 import dev.ryanhcode.sable.api.physics.constraint.fixed.FixedConstraintConfiguration;
 import dev.ryanhcode.sable.api.sublevel.KinematicContraption;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
+import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.math.Pose3d;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.SubLevel;
 import dev.ryanhcode.sable.sublevel.plot.ServerLevelPlot;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
+import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
@@ -25,7 +28,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.BlockAttachedEntity;
 import net.minecraft.world.entity.decoration.Painting;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3d;
@@ -39,21 +45,13 @@ public class SubLevelWarper {
 
     public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension)
     {
-        return WarpSubLevel(subLevel, dimension, subLevel.logicalPose().position(), 0, true);
-    }
-    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final Vector3d position, double lockTime)
-    {
-        return WarpSubLevel(subLevel, dimension, position, lockTime, true);
+        return WarpSubLevel(subLevel, dimension, subLevel.logicalPose().position(), true);
     }
     public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final Vector3d position)
     {
-        return WarpSubLevel(subLevel, dimension, position, 0, true);
+        return WarpSubLevel(subLevel, dimension, position, true);
     }
-    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, double lockTime)
-    {
-        return WarpSubLevel(subLevel, dimension, subLevel.logicalPose().position(), lockTime, true);
-    }
-    private static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final Vector3d position, double lockTime, boolean warpConnected)
+    private static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final Vector3d position, boolean warpConnected)
     {
         ServerSubLevelContainer sourceContainer = ServerSubLevelContainer.getContainer(subLevel.getLevel());
         ServerSubLevelContainer destinationContainer = ServerSubLevelContainer.getContainer((ServerLevel)dimension);
@@ -65,13 +63,13 @@ public class SubLevelWarper {
             subLevels = Set.of(subLevel);
 
         final Vector3d center = subLevel.logicalPose().position();
-        WarpSubLevels(subLevels, sourceContainer, destinationContainer, center, position, lockTime);
+        WarpSubLevels(subLevels, sourceContainer, destinationContainer, center, position);
 
         return subLevels.size();
     }
 
     //this function is *basically* the same as the clone command from sable
-    private static void WarpSubLevels(final Collection<SubLevel> compoundSubLevel, final ServerSubLevelContainer sourceContainer, final ServerSubLevelContainer destinationContainer, final Vector3d center, final Vector3d position, final double lockTime) {
+    private static void WarpSubLevels(final Collection<SubLevel> compoundSubLevel, final ServerSubLevelContainer sourceContainer, final ServerSubLevelContainer destinationContainer, final Vector3d center, final Vector3d position) {
 
         HashMap<UUID,Pair<UUID,Vec3i>> oldToNew = new HashMap<>();
         HashMap<UUID,CompoundTag> subLevelTags = new HashMap<>();
@@ -115,7 +113,6 @@ public class SubLevelWarper {
         }
 
         Set<Entity> visited = new HashSet<>();
-        HashMap<UUID,Vector3d> entityToPositionMap = new HashMap<>();
         var physics = SubLevelPhysicsSystem.get(destinationContainer.getLevel());
         //load tags now that we have new plots and offsets
         for (SubLevel subLevel : compoundSubLevel) {
@@ -131,54 +128,44 @@ public class SubLevelWarper {
                             sourceContainer.getLevel(),
                             destinationContainer.getLevel()));
 
+            //fixes sublevel position
             physics.getPipeline().teleport(copy, pose.position(), pose.orientation());
-            if (lockTime > 0)
-                SubLevelLockManager.AddLock(copy, lockTime); //freezes sublevels for "lockTime" seconds to allow for things to catch up
 
             if (subLevel.getName() != null)
                 copy.setName(subLevel.getName());
 
-            //save teleport positions
+            //teleport entities
             for(Entity entity : visitedEntities.get(subLevel.getUniqueId())) {
                 if (visited.contains(entity)) continue;
                 visited.add(entity);
 
+                Vector3d newPos;
                 if (!EntitySubLevelUtil.shouldKick(entity)) { // paintings and other stationary entities
                     var pos = entity.trackingPosition();
                     var offset = oldToNew.get(subLevel.getUniqueId()).second;
 
-                    entityToPositionMap.put(entity.getUUID(), new Vector3d(pos.x+ offset.getX(),  pos.y+ offset.getY(), pos.z+ offset.getZ()));
+                    newPos = new Vector3d(pos.x+ offset.getX(),  pos.y+ offset.getY(), pos.z+ offset.getZ());
                 }
                 else { // all other entities
                     var offset = new Vector3d(position).sub(center);
                     var pos = Sable.HELPER.projectOutOfSubLevel(sourceContainer.getLevel(), entity.position());
 
-                    entityToPositionMap.put(entity.getUUID(), new Vector3d(pos.x+ offset.x,  pos.y+ offset.y, pos.z+ offset.z));
+                    newPos = new Vector3d(pos.x+ offset.x,  pos.y+ offset.y, pos.z+ offset.z);
                 }
+
+                entity.teleportTo(destinationContainer.getLevel(),
+                        newPos.x,
+                        newPos.y,
+                        newPos.z,
+                        Set.of(),
+                        entity.getYRot(),
+                        entity.getXRot());
             }
         }
 
         //delete old sublevels
         for (SubLevel subLevel : compoundSubLevel) {
             sourceContainer.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED);
-        }
-
-        //hopefully teleport entities
-        for (UUID id : entityToPositionMap.keySet()) {
-            Entity entity = destinationContainer.getLevel().getEntity(id);
-            if (entity == null) continue;
-
-            var pos = entityToPositionMap.get(id);
-
-            entity.teleportTo(destinationContainer.getLevel(),
-                    pos.x,
-                    pos.y,
-                    pos.z,
-                    Set.of(),
-                    entity.getYRot(),
-                    entity.getXRot());
-
-            DimensionalSable.LOGGER.info("Teleported: " + entity.toString());
         }
     }
 }
