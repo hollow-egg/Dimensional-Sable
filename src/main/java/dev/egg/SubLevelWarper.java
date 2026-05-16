@@ -137,12 +137,7 @@ public class SubLevelWarper {
 
             //teleport entities
             for(Entity entity : visitedEntities.get(subLevel.getUniqueId())) {
-                UUID entityID = entity.getUUID();
                 TeleportEntity(entity, sourceContainer, destinationContainer, center, position, subLevel, oldToNew, visited);
-
-                Entity newEntity = destinationContainer.getLevel().getEntity(entityID);
-                if (newEntity != null)
-                    ((EntityMovementExtension)newEntity).sable$setTrackingSubLevel(copy);
             }
         }
 

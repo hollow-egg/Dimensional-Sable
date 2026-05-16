@@ -1,6 +1,5 @@
 package dev.egg;
 
-import com.ibm.icu.impl.Pair;
 import com.mojang.serialization.Codec;
 import dev.egg.mixin.LevelPlotAccessor;
 import dev.egg.mixin.ServerLevelPlotAccessor;
@@ -35,12 +34,10 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.ticks.LevelChunkTicks;
-import org.joml.Vector3d;
+import net.neoforged.fml.ModList;
 
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 //modified from
 //Copyright (c) 2025 KyanBirb (sable touys)
@@ -292,6 +289,12 @@ public record SubLevelTemplate(CompoundTag plotTag) {
                     final BlockEntity blockEntity = BlockEntity.loadStatic(blockPos, chunk.getBlockState(blockPos), blockEntityTag, level.registryAccess());
                     if (blockEntity != null) {
                         chunk.setBlockEntity(blockEntity);
+
+                        //balloon fixer
+                        if (ModList.get().isLoaded("aeronautics"))
+                        {
+                            AeronauticsCompat.tryCreateBalloon(blockEntity);
+                        }
                     }
                 }
             }
