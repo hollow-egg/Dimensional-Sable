@@ -30,7 +30,7 @@ If you just want to steal the (very bad) code, you can do that too ^-^
 NOTICE:
 An official api for this very thing is going to be made by the Simulated Team. So once that comes out, GO USE THAT. I will probably archive this repo when it does.
 
-[EVERYTHIGN BELOW IS INFO FOR DEVELOPERS]
+[EVERYTHING BELOW IS INFO FOR DEVELOPERS]
 
 The function to teleport a sublevel is **WarpSubLevel(subLevel, dimension, position, warpConnected?)**
 
