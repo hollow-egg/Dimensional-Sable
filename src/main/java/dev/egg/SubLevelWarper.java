@@ -11,6 +11,7 @@ import dev.ryanhcode.sable.api.sublevel.KinematicContraption;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.math.Pose3d;
+import dev.ryanhcode.sable.mixinterface.entity.entity_sublevel_collision.EntityMovementExtension;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.SubLevel;
 import dev.ryanhcode.sable.sublevel.plot.ServerLevelPlot;
@@ -112,8 +113,7 @@ public class SubLevelWarper {
             subLevelPlots.put(subLevel.getUniqueId(), copy.getPlot());
         }
 
-        HashMap<UUID,UUID> entityToPassengerMap = new HashMap<>();
-        Set<Entity> visited = new HashSet<>();
+        Set<UUID> visited = new HashSet<>();
         var physics = SubLevelPhysicsSystem.get(destinationContainer.getLevel());
         //load tags now that we have new plots and offsets
         for (SubLevel subLevel : compoundSubLevel) {
@@ -137,36 +137,12 @@ public class SubLevelWarper {
 
             //teleport entities
             for(Entity entity : visitedEntities.get(subLevel.getUniqueId())) {
-                if (visited.contains(entity)) continue;
-                visited.add(entity);
+                UUID entityID = entity.getUUID();
+                TeleportEntity(entity, sourceContainer, destinationContainer, center, position, subLevel, oldToNew, visited);
 
-                DimensionalSable.LOGGER.info("ENTITY: "+entity.toString());
-                for (Entity passenger : entity.getPassengers()) {
-                    DimensionalSable.LOGGER.info("PASSENGER: " + passenger.toString());
-                    entityToPassengerMap.put(entity.getUUID(), passenger.getUUID());
-                }
-
-                Vector3d newPos;
-                if (!EntitySubLevelUtil.shouldKick(entity)) { // paintings and other stationary entities
-                    var pos = entity.trackingPosition();
-                    var offset = oldToNew.get(subLevel.getUniqueId()).second;
-
-                    newPos = new Vector3d(pos.x+ offset.getX(),  pos.y+ offset.getY(), pos.z+ offset.getZ());
-                }
-                else { // all other entities
-                    var offset = new Vector3d(position).sub(center);
-                    var pos = Sable.HELPER.projectOutOfSubLevel(sourceContainer.getLevel(), entity.position());
-
-                    newPos = new Vector3d(pos.x+ offset.x,  pos.y+ offset.y, pos.z+ offset.z);
-                }
-
-                entity.teleportTo(destinationContainer.getLevel(),
-                        newPos.x,
-                        newPos.y,
-                        newPos.z,
-                        Set.of(),
-                        entity.getYRot(),
-                        entity.getXRot());
+                Entity newEntity = destinationContainer.getLevel().getEntity(entityID);
+                if (newEntity != null)
+                    ((EntityMovementExtension)newEntity).sable$setTrackingSubLevel(copy);
             }
         }
 
@@ -174,16 +150,37 @@ public class SubLevelWarper {
         for (SubLevel subLevel : compoundSubLevel) {
             sourceContainer.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED);
         }
+    }
 
-        for (UUID ID : entityToPassengerMap.keySet()) {
-            UUID passengerID = entityToPassengerMap.get(ID);
+    private static void TeleportEntity(final Entity entity, final ServerSubLevelContainer sourceContainer, final ServerSubLevelContainer destinationContainer, final Vector3d center, final Vector3d position, final SubLevel subLevel, final HashMap<UUID,Pair<UUID,Vec3i>> oldToNew, final Set<UUID> visited)
+    {
+        if (visited.contains(entity.getUUID()))
+            return;
+        visited.add(entity.getUUID());
 
-            Entity entity = destinationContainer.getLevel().getEntity(ID);
-            Entity passenger = destinationContainer.getLevel().getEntity(passengerID);
-            if (entity != null && passenger != null) {
-                passenger.startRiding(entity, true);
-                DimensionalSable.LOGGER.info("Made: " + passenger.toString() + " RIDE " + entity.toString());
-            }
+        Vector3d newPos;
+        if (!EntitySubLevelUtil.shouldKick(entity) && !entity.isPassenger()) { // paintings and other stationary entities
+            var pos = entity.trackingPosition();
+            var offset = oldToNew.get(subLevel.getUniqueId()).second;
+
+            newPos = new Vector3d(pos.x+ offset.getX(),  pos.y+ offset.getY(), pos.z+ offset.getZ());
         }
+        else { // all other entities
+            var offset = new Vector3d(position).sub(center);
+            var pos = Sable.HELPER.projectOutOfSubLevel(sourceContainer.getLevel(), entity.position());
+
+            newPos = new Vector3d(pos.x+ offset.x,  pos.y+ offset.y, pos.z+ offset.z);
+        }
+
+        entity.unRide();
+        entity.teleportTo(
+                destinationContainer.getLevel(),
+                newPos.x,
+                newPos.y,
+                newPos.z,
+                Set.of(),
+                entity.getYRot(),
+                entity.getXRot()
+        );
     }
 }
