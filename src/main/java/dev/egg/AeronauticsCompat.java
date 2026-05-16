@@ -27,7 +27,6 @@ public class AeronauticsCompat {
             if (GAS_PROVIDER.isInstance(be)) {
                 GAS_PROVIDER.getMethod("tryCreateBalloon")
                         .invoke(be);
-                DimensionalSable.LOGGER.info("YAY!!!");
             }
         }
         catch (Exception ignored) {}
