@@ -1,7 +1,5 @@
 package dev.egg.registries;
 
-import com.ibm.icu.impl.Pair;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -11,6 +9,8 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.UUID;
 import java.util.Vector;
+
+import dev.egg.DimensionalSable.Pair;
 
 public class BlockEntityRegistry {
     private final static HashMap<String, Vector<BlockEntityAccessor>> blockEntityFixerMap = new HashMap<>();

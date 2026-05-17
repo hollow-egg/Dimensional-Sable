@@ -27,7 +27,7 @@ public class DisplayLinkBlockEntity extends BlockEntityAccessor {
                     {
                         var offset = info.moveInfo().oldToNewSubLevelMap().get(sublevel.getUniqueId());
                         if (offset != null) //avoid accessing possibly null pair (sublevel might not be connected)
-                            pos = pos.offset(offset.second);
+                            pos = pos.offset(offset.second());
                     }
                     else // target is in world position
                     {
@@ -36,7 +36,7 @@ public class DisplayLinkBlockEntity extends BlockEntityAccessor {
                             BlockPos offsetPos = new BlockPos(offsetList[0],offsetList[1],offsetList[2]);
 
                             var offset = info.moveInfo().oldToNewSubLevelMap().get(info.oldSubLevelID());
-                            offsetPos = offsetPos.subtract(offset.second);
+                            offsetPos = offsetPos.subtract(offset.second());
 
                             info.tag().putIntArray("TargetOffset", new int[]{offsetPos.getX(),offsetPos.getY(),offsetPos.getZ()});
                         }

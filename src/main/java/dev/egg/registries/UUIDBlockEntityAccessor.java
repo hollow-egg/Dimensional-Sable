@@ -1,6 +1,5 @@
 package dev.egg.registries;
 
-import dev.egg.DimensionalSable;
 import net.minecraft.nbt.CompoundTag;
 
 import java.util.Set;
@@ -19,7 +18,7 @@ public class UUIDBlockEntityAccessor extends BlockEntityAccessor {
             if (info.tag().hasUUID(tag)) {
                 var newSubLevel = info.moveInfo().oldToNewSubLevelMap().get(info.oldSubLevelID());
                 if (newSubLevel != null) {
-                    UUID goalSubLevel = newSubLevel.first;
+                    UUID goalSubLevel = newSubLevel.first();
                     info.tag().putUUID(tag, goalSubLevel);
                 }
             }

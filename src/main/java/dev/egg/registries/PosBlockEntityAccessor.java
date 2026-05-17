@@ -19,7 +19,7 @@ public class PosBlockEntityAccessor extends BlockEntityAccessor {
             if (info.tag().contains(tag)) {
                 var list = info.tag().getIntArray(tag);
                 BlockPos pos = new BlockPos(list[0],list[1],list[2]);
-                pos = pos.offset(info.moveInfo().oldToNewSubLevelMap().get(info.oldSubLevelID()).second);
+                pos = pos.offset(info.moveInfo().oldToNewSubLevelMap().get(info.oldSubLevelID()).second());
                 info.tag().putIntArray(tag, new int[]{pos.getX(),pos.getY(),pos.getZ()});
             }
         }

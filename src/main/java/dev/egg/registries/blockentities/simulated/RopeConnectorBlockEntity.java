@@ -1,13 +1,11 @@
 package dev.egg.registries.blockentities.simulated;
 
-import com.ibm.icu.impl.Pair;
 import dev.egg.registries.BlockEntityAccessor;
 import dev.egg.registries.BlockEntityRegistry;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.*;
-import org.joml.Vector3d;
 
-import java.util.HashMap;
+import dev.egg.DimensionalSable.Pair;
 import java.util.UUID;
 
 public class RopeConnectorBlockEntity extends BlockEntityAccessor {
@@ -33,13 +31,13 @@ public class RopeConnectorBlockEntity extends BlockEntityAccessor {
                         if (mapped != null) {
                             if (attachment.contains("blockAttachment")) {
                                 var posArray = attachment.getIntArray("blockAttachment");
-                                posArray[0] += mapped.second.getX();
-                                posArray[1] += mapped.second.getY();
-                                posArray[2] += mapped.second.getZ();
+                                posArray[0] += mapped.second().getX();
+                                posArray[1] += mapped.second().getY();
+                                posArray[2] += mapped.second().getZ();
                                 attachment.putIntArray("blockAttachment", posArray);
                             }
 
-                            attachment.putString("subLevelID", mapped.first.toString());
+                            attachment.putString("subLevelID", mapped.first().toString());
                         }
                     }
 
