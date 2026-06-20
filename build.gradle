@@ -28,6 +28,13 @@ repositories {
             includeGroup("dev.ryanhcode.sable-companion")
         }
     }
+
+    maven { url = "https://maven.createmod.net" } // Create, Ponder, Flywheel
+    maven { url = "https://maven.ithundxr.dev/snapshots" } // Registrate
+    maven { // Veil
+        name = "BlameJared Maven (CrT / Bookshelf)"
+        url = "https://maven.blamejared.com"
+    }
 }
 
 base {
@@ -88,14 +95,30 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 
 dependencies {
-    //api stuffs
-    api files("libs/sable-common-${minecraft_version}-${sable_version}.jar")
-    api files("libs/sable-companion-common-${minecraft_version}-${sable_companion_version}.jar")
-    //required
-    implementation files("libs/sable-neoforge-${minecraft_version}-${sable_version}.jar")
-    //optional
-    compileOnly(files("libs/create-${minecraft_version}-${create_version}.jar"))
-    compileOnly(files("libs/create-aeronautics-bundled-${minecraft_version}-${create_aeronautics_version}.jar"))
+    //sable
+    compileOnly("dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:${sable_version}")
+    jarJar(api("dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:[${sable_companion_version},)")) {
+        version {
+            prefer sable_companion_version
+        }
+    }
+
+    //create
+    implementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
+    implementation("net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}")
+    compileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_version}")
+    runtimeOnly("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}")
+    implementation("com.tterrag.registrate:Registrate:${registrate_version}")
+
+    //veil
+    implementation("foundry.veil:veil-neoforge-${minecraft_version}:${veil_version}") {
+        exclude group: "maven.modrinth"
+        exclude group: "me.fallenbreath"
+    }
+    implementation("org.lwjgl:lwjgl:${lwjgl_version}")
+
+    //aeronautics
+    runtimeOnly files("libs/create-aeronautics-bundled-${minecraft_version}-${create_aeronautics_version}.jar")
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
