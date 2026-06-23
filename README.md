@@ -1,3 +1,5 @@
+ALERT: I will not be using AI for this project, nor will pull requests using AI be accepted. Thank you for your understanding
+
 <p align="center"><img src="https://github.com/user-attachments/assets/dee820d1-99f8-4836-a6a5-f2a1b7a05081" alt="Logo" width="200"></p>
 <h1 align="center">Dimensional Sable<br>
 <div align="center">
