@@ -1,7 +1,7 @@
-package dev.egg.registries.blockentities.simulated;
+package dev.egg.dimensionalsable.registries.blockentities.simulated;
 
-import dev.egg.registries.BlockEntityAccessor;
-import dev.egg.registries.BlockEntityRegistry;
+import dev.egg.dimensionalsable.registries.BlockEntityAccessor;
+import dev.egg.dimensionalsable.registries.BlockEntityRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;

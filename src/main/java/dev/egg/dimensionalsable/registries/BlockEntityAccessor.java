@@ -1,4 +1,4 @@
-package dev.egg.registries;
+package dev.egg.dimensionalsable.registries;
 
 import net.minecraft.nbt.CompoundTag;
 

@@ -1,7 +1,7 @@
-package dev.egg.registries.blockentities.create;
+package dev.egg.dimensionalsable.registries.blockentities.create;
 
-import dev.egg.registries.BlockEntityAccessor;
-import dev.egg.registries.BlockEntityRegistry;
+import dev.egg.dimensionalsable.registries.BlockEntityAccessor;
+import dev.egg.dimensionalsable.registries.BlockEntityRegistry;
 import net.minecraft.nbt.CompoundTag;
 
 public class BearingBlockEntity extends BlockEntityAccessor {

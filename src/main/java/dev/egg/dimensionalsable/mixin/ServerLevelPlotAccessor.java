@@ -1,4 +1,4 @@
-package dev.egg.mixin;
+package dev.egg.dimensionalsable.mixin;
 
 import dev.ryanhcode.sable.sublevel.plot.ServerLevelPlot;
 import net.minecraft.world.level.ChunkPos;

@@ -1,11 +1,11 @@
-package dev.egg;
+package dev.egg.dimensionalsable;
 
 import com.mojang.logging.LogUtils;
-import dev.egg.registries.BlockEntityRegistry;
-import dev.egg.registries.blockentities.create.DisplayLinkBlockEntity;
-import dev.egg.registries.blockentities.create.MechanicalPistonBlockEntity;
-import dev.egg.registries.blockentities.create.BearingBlockEntity;
-import dev.egg.registries.blockentities.simulated.*;
+import dev.egg.dimensionalsable.registries.BlockEntityRegistry;
+import dev.egg.dimensionalsable.registries.blockentities.create.DisplayLinkBlockEntity;
+import dev.egg.dimensionalsable.registries.blockentities.create.MechanicalPistonBlockEntity;
+import dev.egg.dimensionalsable.registries.blockentities.create.BearingBlockEntity;
+import dev.egg.dimensionalsable.registries.blockentities.simulated.*;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;

@@ -1,7 +1,7 @@
-package dev.egg;
+package dev.egg.dimensionalsable;
 
 import com.simibubi.create.content.contraptions.AbstractContraptionEntity;
-import dev.egg.registries.BlockEntityRegistry;
+import dev.egg.dimensionalsable.registries.BlockEntityRegistry;
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.api.SubLevelHelper;
 import dev.ryanhcode.sable.api.entity.EntitySubLevelUtil;
@@ -21,7 +21,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import org.joml.Vector3d;
 
-import dev.egg.DimensionalSable.Pair;
+import dev.egg.dimensionalsable.DimensionalSable.Pair;
 
 import java.util.*;
 

@@ -1,4 +1,4 @@
-package dev.egg;
+package dev.egg.dimensionalsable;
 
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.fml.ModList;

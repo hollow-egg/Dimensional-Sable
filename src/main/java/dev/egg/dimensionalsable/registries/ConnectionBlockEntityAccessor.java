@@ -1,6 +1,5 @@
-package dev.egg.registries;
+package dev.egg.dimensionalsable.registries;
 
-import dev.egg.DimensionalSable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 

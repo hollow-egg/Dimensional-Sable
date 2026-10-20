@@ -1,4 +1,4 @@
-package dev.egg.registries;
+package dev.egg.dimensionalsable.registries;
 
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
@@ -10,7 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.Vector;
 
-import dev.egg.DimensionalSable.Pair;
+import dev.egg.dimensionalsable.DimensionalSable.Pair;
 
 public class BlockEntityRegistry {
     private final static HashMap<String, Vector<BlockEntityAccessor>> blockEntityFixerMap = new HashMap<>();

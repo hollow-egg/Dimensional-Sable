@@ -1,11 +1,10 @@
-package dev.egg.registries.blockentities.create;
+package dev.egg.dimensionalsable.registries.blockentities.create;
 
-import dev.egg.registries.BlockEntityAccessor;
-import dev.egg.registries.BlockEntityRegistry;
+import dev.egg.dimensionalsable.registries.BlockEntityAccessor;
+import dev.egg.dimensionalsable.registries.BlockEntityRegistry;
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 
 public class DisplayLinkBlockEntity extends BlockEntityAccessor {

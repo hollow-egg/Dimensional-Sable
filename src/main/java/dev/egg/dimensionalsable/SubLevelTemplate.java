@@ -1,9 +1,9 @@
-package dev.egg;
+package dev.egg.dimensionalsable;
 
 import com.mojang.serialization.Codec;
-import dev.egg.mixin.LevelPlotAccessor;
-import dev.egg.mixin.ServerLevelPlotAccessor;
-import dev.egg.registries.BlockEntityRegistry;
+import dev.egg.dimensionalsable.mixin.LevelPlotAccessor;
+import dev.egg.dimensionalsable.mixin.ServerLevelPlotAccessor;
+import dev.egg.dimensionalsable.registries.BlockEntityRegistry;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
 import dev.ryanhcode.sable.mixinterface.plot.serialization.LevelChunkTicksExtension;
