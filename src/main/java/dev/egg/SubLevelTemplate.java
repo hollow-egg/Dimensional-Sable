@@ -64,7 +64,10 @@ public record SubLevelTemplate(CompoundTag plotTag) {
         final ServerLevel level = plot.getSubLevel().getLevel();
 
         int minY = level.dimensionType().minY();
-        final BlockPos center = plot.getCenterBlock().offset(0,minY,0); // minY accounts for the different starting y levels a dimension can have (overworld is -64, nether is 0)
+        var stupidFactor = ((level.dimensionType().height() + 2 * minY) / 2 ) - 128;
+        final BlockPos center = plot.getCenterBlock().offset(0, minY - stupidFactor,0); // minY accounts for the different starting y levels a dimension can have (overworld is -64, nether is 0)
+//        var centerChunk = plot.getCenterChunk();
+//        final BlockPos center = new BlockPos(centerChunk.getMinBlockX() + 8, (level.getMinBuildHeight() * 2 + level.getMaxBuildHeight()) / 2, centerChunk.getMinBlockZ() + 8);
 
         final CompoundTag chunks = new CompoundTag();
         for (final PlotChunkHolder chunkHolder : plot.getLoadedChunks()) {
@@ -165,8 +168,10 @@ public record SubLevelTemplate(CompoundTag plotTag) {
         final ServerLevel level = subLevel.getLevel();
 
         int minY = level.dimensionType().minY();
-        final BlockPos center = destinationPlot.getCenterBlock().offset(0,minY,0); // minY accounts for the different starting y levels a dimension can have (overworld is -64, nether is 0)
-
+        var stupidFactor = ((level.dimensionType().height() + 2 * minY) / 2 ) - 128;
+        final BlockPos center = destinationPlot.getCenterBlock().offset(0, minY - stupidFactor,0); // minY accounts for the different starting y levels a dimension can have (overworld is -64, nether is 0)
+//        var centerChunk = destinationPlot.getCenterChunk();
+//        final BlockPos center = new BlockPos(centerChunk.getMinBlockX() + 8, (level.getMinBuildHeight() * 2 + level.getMaxBuildHeight()) / 2, centerChunk.getMinBlockZ() + 8);
         if (tag.contains("biome")) {
             final ResourceLocation location = ResourceLocation.tryParse(tag.getString("biome"));
 

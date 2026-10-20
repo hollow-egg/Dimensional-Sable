@@ -88,8 +88,14 @@ public class SubLevelWarper {
             ServerSubLevel copy = (ServerSubLevel) destinationContainer.allocateNewSubLevel(pose);
             subLevelTags.put(subLevel.getUniqueId(), tag);
 
-            Vec3i start = serverSubLevel.getPlot().getCenterBlock().offset(0, sourceContainer.getLevel().dimensionType().minY(), 0);
-            Vec3i end = copy.getPlot().getCenterBlock().offset(0, destinationContainer.getLevel().dimensionType().minY(), 0);
+            var oldLevel = sourceContainer.getLevel();
+            var newLevel = destinationContainer.getLevel();
+
+            var oldStupidFactor = ((oldLevel.dimensionType().height() + 2 * sourceContainer.getLevel().dimensionType().minY()) / 2 ) - 128;
+            var newStupidFactor = ((newLevel.dimensionType().height() + 2 * destinationContainer.getLevel().dimensionType().minY()) / 2 ) - 128;
+
+            Vec3i start = serverSubLevel.getPlot().getCenterBlock().offset(0, sourceContainer.getLevel().dimensionType().minY() - oldStupidFactor, 0);
+            Vec3i end = copy.getPlot().getCenterBlock().offset(0, destinationContainer.getLevel().dimensionType().minY() - newStupidFactor, 0);
             Vec3i offset = end.subtract(start);
 
             oldToNew.put(subLevel.getUniqueId(), Pair.of(copy.getUniqueId(),offset));
