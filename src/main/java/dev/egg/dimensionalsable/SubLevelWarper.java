@@ -1,164 +1,195 @@
 package dev.egg.dimensionalsable;
 
-import com.simibubi.create.content.contraptions.AbstractContraptionEntity;
-import dev.egg.dimensionalsable.registries.BlockEntityRegistry;
+import dev.egg.dimensionalsable.utils.BlockEntityTransformer;
+import dev.egg.dimensionalsable.utils.ServerSubLevelOccupancy;
 import dev.ryanhcode.sable.Sable;
-import dev.ryanhcode.sable.api.SubLevelHelper;
+import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
 import dev.ryanhcode.sable.api.entity.EntitySubLevelUtil;
-import dev.ryanhcode.sable.api.sublevel.KinematicContraption;
+import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
+import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
+import dev.ryanhcode.sable.companion.math.BoundingBox3d;
 import dev.ryanhcode.sable.companion.math.Pose3d;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.SubLevel;
-import dev.ryanhcode.sable.sublevel.plot.ServerLevelPlot;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
+import dev.ryanhcode.sable.sublevel.storage.serialization.SubLevelData;
+import dev.ryanhcode.sable.sublevel.storage.serialization.SubLevelSerializer;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
-import net.minecraft.core.Vec3i;
+import dev.ryanhcode.sable.util.SableNBTUtils;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Quaterniond;
 import org.joml.Vector3d;
-
-import dev.egg.dimensionalsable.DimensionalSable.Pair;
 
 import java.util.*;
 
 public class SubLevelWarper {
 
-    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension)
-    {
-        return WarpSubLevel(subLevel, dimension, subLevel.logicalPose().position(), true);
-    }
-    public static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final Vector3d position)
-    {
-        return WarpSubLevel(subLevel, dimension, position, true);
-    }
-    private static int WarpSubLevel(final ServerSubLevel subLevel, final Level dimension, final Vector3d position, boolean warpConnected)
-    {
-        ServerSubLevelContainer sourceContainer = ServerSubLevelContainer.getContainer(subLevel.getLevel());
-        ServerSubLevelContainer destinationContainer = ServerSubLevelContainer.getContainer((ServerLevel)dimension);
-
-        Collection<SubLevel> subLevels;
-        if (warpConnected)
-            subLevels = SubLevelHelper.getConnectedChain(subLevel); //gets all sublevels that sable considers "connected" (ropes, springs, swivel bearings etc)
-        else
-            subLevels = Set.of(subLevel);
-
-        final Vector3d center = subLevel.logicalPose().position();
-        WarpSubLevels(subLevels, sourceContainer, destinationContainer, center, position);
-
-        return subLevels.size();
+    public static int warpConnectedSubLevels(ServerSubLevel targetSubLevel, ServerLevel level, Vector3d position) {
+        return warpConnectedSubLevels(targetSubLevel, getSubLevelGroup(targetSubLevel), level, position, new Quaterniond());
     }
 
-    //this function is *basically* the same as the clone command from sable
-    private static void WarpSubLevels(final Collection<SubLevel> compoundSubLevel, final ServerSubLevelContainer sourceContainer, final ServerSubLevelContainer destinationContainer, final Vector3d center, final Vector3d position) {
+    public static int warpConnectedSubLevels(ServerSubLevel targetSubLevel, ServerLevel level, Vector3d position, Quaterniond orientationTransform) {
+        return warpConnectedSubLevels(targetSubLevel, getSubLevelGroup(targetSubLevel), level, position, orientationTransform);
+    }
 
-        HashMap<UUID,Pair<UUID,Vec3i>> oldToNew = new HashMap<>();
-        HashMap<UUID,CompoundTag> subLevelTags = new HashMap<>();
-        HashMap<UUID,ServerLevelPlot> subLevelPlots = new HashMap<>();
-        HashMap<UUID,Set<Entity>> visitedEntities = new HashMap<>();
+    public static int warpConnectedSubLevels(ServerSubLevel targetSubLevel, List<ServerSubLevel> dependents, ServerLevel level, Vector3d position, Quaterniond orientationTransform) {
 
-        for (SubLevel subLevel : compoundSubLevel) {
+        // in the same dimension
+        if (targetSubLevel.getLevel() == level) return 0;
 
-            ServerSubLevel serverSubLevel = (ServerSubLevel) subLevel;
+        final ServerLevel sourceLevel = targetSubLevel.getLevel();
+        final ServerSubLevelContainer sourceContainer = SubLevelContainer.getContainer(sourceLevel);
+        if (sourceContainer == null) return 0;
 
-            //grab entities
-            var boxX = subLevel.boundingBox().width();
-            var boxY = subLevel.boundingBox().height();
-            var boxZ = subLevel.boundingBox().length();
-            AABB box = new AABB(-boxX/2 + center.x, -boxY/2 + center.y, -boxZ/2 + center.z, boxX/2 + center.x, boxY/2 + center.y, boxZ/2 + center.z);
-            box.inflate(1.0);
+        SubLevelPhysicsSystem systemSource = SubLevelPhysicsSystem.get(sourceLevel);
 
-            List<Entity> candidates = sourceContainer.getLevel().getEntities(null, box);
-            visitedEntities.put(subLevel.getUniqueId(), new HashSet<>(candidates));
+        // setup transform
+        final Quaterniond R = new Quaterniond(orientationTransform).normalize();
+        final Vector3d targetOldPos = new Vector3d(targetSubLevel.logicalPose().position());
+        Tag blockEntityTransformer = BlockEntityTransformer.createTransformTag(sourceLevel, targetOldPos, position, R);
 
-            //currently, my solution for contraptions is to disassemble them. I'm looking into other options
-            for(KinematicContraption contraption : serverSubLevel.getPlot().getContraptions())
-                ((AbstractContraptionEntity) contraption).disassemble();
+        // save and load sublevels
+        for (ServerSubLevel subLevel : dependents) {
+            RigidBodyHandle physicsHandle = systemSource.getPhysicsHandle(subLevel);
 
-            //save sublevel data
-            CompoundTag tag = SubLevelTemplate.save(serverSubLevel.getPlot());
-            //allocate
-            Pose3d pose = new Pose3d();
-            pose.position().set(new Vector3d(subLevel.logicalPose().position()).sub(new Vector3d(center)).add(position)); //keeps relative positions
-            pose.orientation().set(subLevel.logicalPose().orientation());
+            Vector3d newPos = subLevel.logicalPose().position().sub(targetOldPos, new Vector3d());
+            R.transform(newPos);
+            newPos.add(position);
+            Quaterniond newOrientation = R.mul(subLevel.logicalPose().orientation(), new Quaterniond());
+            Pose3d pose = new Pose3d(newPos, newOrientation, subLevel.logicalPose().rotationPoint(), subLevel.logicalPose().scale());
 
-            ServerSubLevel copy = (ServerSubLevel) destinationContainer.allocateNewSubLevel(pose);
-            subLevelTags.put(subLevel.getUniqueId(), tag);
+            Vector3d newVel = R.transform(physicsHandle.getLinearVelocity(new Vector3d()));
+            Vector3d newAngVel = R.transform(physicsHandle.getAngularVelocity(new Vector3d()));
 
-            var oldLevel = sourceContainer.getLevel();
-            var newLevel = destinationContainer.getLevel();
+            SubLevelData data = SubLevelSerializer.toData(subLevel, List.of());
 
-            var oldStupidFactor = ((oldLevel.dimensionType().height() + 2 * sourceContainer.getLevel().dimensionType().minY()) / 2 ) - 128;
-            var newStupidFactor = ((newLevel.dimensionType().height() + 2 * destinationContainer.getLevel().dimensionType().minY()) / 2 ) - 128;
+            final CompoundTag fullTag = data.fullTag();
 
-            Vec3i start = serverSubLevel.getPlot().getCenterBlock().offset(0, sourceContainer.getLevel().dimensionType().minY() - oldStupidFactor, 0);
-            Vec3i end = copy.getPlot().getCenterBlock().offset(0, destinationContainer.getLevel().dimensionType().minY() - newStupidFactor, 0);
-            Vec3i offset = end.subtract(start);
+            fullTag.put("pose", SableNBTUtils.writePose3d(pose));
+            fullTag.put("linear_velocity", SableNBTUtils.writeVector3d(newVel));
+            fullTag.put("angular_velocity", SableNBTUtils.writeVector3d(newAngVel));
+            CompoundTag plotTag = fullTag.getCompound("plot");
+            BlockEntityTransformer.addTransformTag(plotTag, blockEntityTransformer);
+            fullTag.put("plot", plotTag);
 
-            oldToNew.put(subLevel.getUniqueId(), Pair.of(copy.getUniqueId(),offset));
-            subLevelPlots.put(subLevel.getUniqueId(), copy.getPlot());
+            final SubLevelData original = SubLevelSerializer.fromData(fullTag);
+            SubLevelSerializer.fullyLoad(level, original);
         }
 
-        Set<UUID> visited = new HashSet<>();
-        var physics = SubLevelPhysicsSystem.get(destinationContainer.getLevel());
-        //load tags now that we have new plots and offsets
-        for (SubLevel subLevel : compoundSubLevel) {
-            ServerLevelPlot plot = subLevelPlots.get(subLevel.getUniqueId());
-            ServerSubLevel copy = plot.getSubLevel();
-            //copy data to plot in other dimension
-            Pose3d pose = new Pose3d(copy.logicalPose());
-            //modifies nbt data with custom block entity accessors
-            SubLevelTemplate.load(plot, subLevelTags.get(subLevel.getUniqueId()),
-                    new BlockEntityRegistry.MoveInfo(
-                            oldToNew,
-                            new Vector3d(position).sub(center),
-                            sourceContainer.getLevel(),
-                            destinationContainer.getLevel()));
+        // remove old sublevels
+        Set<UUID> handled = new HashSet<>();
+        for (ServerSubLevel subLevel : dependents) {
+            // teleport entities
+            Set<Entity> entities = new HashSet<>(sourceLevel.getEntities(null, subLevel.boundingBox().toMojang().inflate(1.0)));
+            entities.removeIf(e ->  e.isPassenger() || !handled.add(e.getUUID()));
+            teleportAllEntities(entities, sourceLevel, level, R, targetOldPos, position);
 
-            //fixes sublevel position
-            physics.getPipeline().teleport(copy, pose.position(), pose.orientation());
+            ((ServerSubLevelOccupancy) subLevel).dimensionalsable$markDimensionalRemove();
+            sourceContainer.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED);
+        }
 
-            if (subLevel.getName() != null)
-                copy.setName(subLevel.getName());
+        return dependents.size();
+    }
 
-            //teleport entities
-            for(Entity entity : visitedEntities.get(subLevel.getUniqueId())) {
-                TeleportEntity(entity, sourceContainer, destinationContainer, center, position, subLevel, oldToNew, visited);
+    public static List<ServerSubLevel> getSubLevelGroup(ServerSubLevel subLevel) {
+        final List<ServerSubLevel> visited = new ArrayList<>();
+        final ObjectOpenHashSet<ServerSubLevel> frontier = new ObjectOpenHashSet<>();
+
+        frontier.add(subLevel);
+
+        while (!frontier.isEmpty()) {
+            final ServerSubLevel current = frontier.iterator().next();
+
+            frontier.remove(current);
+            visited.add(current);
+
+            final Iterable<SubLevel> intersecting = Sable.HELPER.getAllIntersecting(current.getLevel(), new BoundingBox3d(current.boundingBox()));
+
+            // Intersecting dependencies
+            for (final SubLevel neighbor : intersecting) {
+                final ServerSubLevel serverNeighbor = (ServerSubLevel) neighbor;
+
+                if (!visited.contains(serverNeighbor)) {
+                    frontier.add(serverNeighbor);
+                }
+            }
+
+            // Actor dependencies
+            for (final BlockEntitySubLevelActor actor : current.getPlot().getBlockEntityActors()) {
+                final Iterable<SubLevel> dependencies = actor.sable$getConnectionDependencies();
+
+                if (dependencies == null) continue;
+
+                for (final SubLevel dependency : dependencies) {
+
+                    if (!visited.contains((ServerSubLevel) dependency)) {
+                        frontier.add((ServerSubLevel) dependency);
+                    }
+                }
             }
         }
 
-        //delete old sublevels
-        for (SubLevel subLevel : compoundSubLevel) {
-            sourceContainer.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED);
-        }
+        return visited;
     }
 
-    private static void TeleportEntity(final Entity entity, final ServerSubLevelContainer sourceContainer, final ServerSubLevelContainer destinationContainer, final Vector3d center, final Vector3d position, final SubLevel subLevel, final HashMap<UUID,Pair<UUID,Vec3i>> oldToNew, final Set<UUID> visited)
+    private static void teleportAllEntities(Set<Entity> entities, ServerLevel sourceLevel, ServerLevel destinationLevel, Quaterniond rotation, Vector3d targetOldPos, Vector3d targetNewPos) {
+        // hold vehicles for teleport
+        Map<UUID,List<UUID>> vehicles = new HashMap<>();
+        ObjectOpenHashSet<Entity> frontier = new ObjectOpenHashSet<>();
+        frontier.addAll(entities);
+
+        while (!frontier.isEmpty()) {
+            Entity vehicle = frontier.iterator().next();
+            frontier.remove(vehicle);
+            if (vehicle.getPassengers().isEmpty()) continue;
+            List<Entity> passengers = vehicle.getPassengers();
+
+            List<UUID> passengerIDs = new ArrayList<>();
+            for (final Entity passenger : passengers) {
+                passengerIDs.add(passenger.getUUID());
+                entities.add(passenger);
+                frontier.add(passenger);
+            }
+            vehicles.put(vehicle.getUUID(), passengerIDs);
+        }
+        for (Entity entity : entities) {
+            teleportEntity(entity, sourceLevel, destinationLevel, rotation, targetOldPos, targetNewPos);
+        }
+        // attempt to re-ride entities
+        vehicles.forEach((entityID, passengerIDs) -> {
+            Entity vehicle = destinationLevel.getEntity(entityID);
+            if (vehicle == null) return;
+            passengerIDs.forEach((UUID passengerID) -> {
+                Entity passenger = destinationLevel.getEntity(passengerID);
+                if (passenger == null) return;
+
+                passenger.startRiding(vehicle, true);
+            });
+        });
+    }
+
+    private static void teleportEntity(Entity entity, ServerLevel sourceLevel, ServerLevel destinationLevel, Quaterniond rotation, Vector3d targetOldPos, Vector3d targetNewPos)
     {
-        if (visited.contains(entity.getUUID()))
-            return;
-        visited.add(entity.getUUID());
-
-        Vector3d newPos;
+        Vec3 newPos;
         if (!EntitySubLevelUtil.shouldKick(entity) && !entity.isPassenger()) { // paintings and other stationary entities
-            var pos = entity.trackingPosition();
-            var offset = oldToNew.get(subLevel.getUniqueId()).second();
-
-            newPos = new Vector3d(pos.x+ offset.getX(),  pos.y+ offset.getY(), pos.z+ offset.getZ());
+            newPos = entity.trackingPosition();
         }
         else { // all other entities
-            var offset = new Vector3d(position).sub(center);
-            var pos = Sable.HELPER.projectOutOfSubLevel(sourceContainer.getLevel(), entity.position());
-
-            newPos = new Vector3d(pos.x+ offset.x,  pos.y+ offset.y, pos.z+ offset.z);
+            Vec3 pos = Sable.HELPER.projectOutOfSubLevel(sourceLevel, entity.position());
+            Vector3d p = new Vector3d(pos.x, pos.y, pos.z).sub(targetOldPos);
+            rotation.transform(p);
+            p.add(targetNewPos);
+            newPos = new Vec3(p.x, p.y, p.z);
         }
 
-        entity.unRide();
         entity.teleportTo(
-                destinationContainer.getLevel(),
+                destinationLevel,
                 newPos.x,
                 newPos.y,
                 newPos.z,

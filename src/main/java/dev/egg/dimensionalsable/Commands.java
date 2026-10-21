@@ -16,8 +16,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.joml.Vector3d;
 
-import static dev.egg.dimensionalsable.SubLevelWarper.WarpSubLevel;
-
 public class Commands {
     @SubscribeEvent
     public static void registerCommands(RegisterCommandsEvent event){
@@ -26,7 +24,7 @@ public class Commands {
     public static class DimensionCommand {
         public static void register(CommandDispatcher<CommandSourceStack> dispatcher){
             dispatcher.register(net.minecraft.commands.Commands.literal("sable")
-                .then(net.minecraft.commands.Commands.literal("dimension_set")
+                .then(net.minecraft.commands.Commands.literal("dim_teleport")
                 .then(net.minecraft.commands.Commands.argument("sub_level", SubLevelArgumentType.subLevels())
                 .then(net.minecraft.commands.Commands.argument("dimension", DimensionArgument.dimension())
                         .executes(DimensionCommand::executeNoPosition)
@@ -40,9 +38,14 @@ public class Commands {
             CommandSourceStack source = ctx.getSource();
             ServerSubLevel sublevel = SubLevelArgumentType.getSingleSubLevel(ctx, "sub_level");
 
-            int warpCount = WarpSubLevel(sublevel, dimension);
+            if (sublevel.getLevel() == dimension) {
+                source.sendFailure(Component.literal("Cannot warp sublevel from " + sublevel.getLevel().dimension().location().getPath() + " to " + dimension.dimension().location().getPath()));
+                return 0;
+            }
 
-            source.sendSuccess(()->Component.literal("Teleported " + warpCount + " sublevels to " + dimension.dimension().location().getPath()), false);
+            int warpCount = SubLevelWarper.warpConnectedSubLevels(sublevel, dimension, sublevel.logicalPose().position());
+
+            source.sendSuccess(()->Component.literal("Warped " + warpCount + " sublevels to " + dimension.dimension().location().getPath()), true);
             return Command.SINGLE_SUCCESS;
         }
         private static int execute(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -53,9 +56,14 @@ public class Commands {
             CommandSourceStack source = ctx.getSource();
             ServerSubLevel sublevel = SubLevelArgumentType.getSingleSubLevel(ctx, "sub_level");
 
-            int warpCount = WarpSubLevel(sublevel, dimension, new Vector3d(position.x, position.y, position.z));
+            if (sublevel.getLevel() == dimension) {
+                source.sendFailure(Component.literal("Cannot warp sublevel from " + sublevel.getLevel().dimension().location().getPath() + " to " + dimension.dimension().location().getPath()));
+                return 0;
+            }
 
-            source.sendSuccess(()->Component.literal("Teleported " + warpCount + " sublevels to " + dimension.dimension().location().getPath()), false);
+            int warpCount = SubLevelWarper.warpConnectedSubLevels(sublevel, dimension, new Vector3d(position.x, position.y, position.z));
+
+            source.sendSuccess(()->Component.literal("Warped " + warpCount + " sublevels to " + dimension.dimension().location().getPath()), false);
             return Command.SINGLE_SUCCESS;
         }
     }

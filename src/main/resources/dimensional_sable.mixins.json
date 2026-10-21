@@ -4,8 +4,11 @@
   "package": "dev.egg.dimensionalsable.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "LevelPlotAccessor",
-    "ServerLevelPlotAccessor"
+    "MinecraftServerMixin",
+    "ServerLevelPlotMixin",
+    "ServerSubLevelMixin",
+    "SubLevelContainerMixin",
+    "SubLevelOccupancySavedDataMixin"
   ],
   "client": [
   ],
