@@ -1,14 +1,10 @@
 <p align="center"><img src="https://github.com/user-attachments/assets/dee820d1-99f8-4836-a6a5-f2a1b7a05081" alt="Logo" width="200"></p>
 <div align="center">
   <h1 align="center">Dimensional Sable<br>
-    <a href="https://modrinth.com/mod/dimensional-sable">
-        <img src="https://img.shields.io/modrinth/dt/dimensional-sable?logo=modrinth&amp;label=&amp;suffix=%20&amp;style=flat&amp;color=242629&amp;labelColor=5CA424&amp;logoColor=1C1C1C" alt="Modrinth Download"/>
-    </a>
-    <a href="https://www.curseforge.com/minecraft/mc-mods/dimensional-sable">  
-        <img src="https://img.shields.io/curseforge/dt/1758851?logo=curseforge&amp;label=&amp;suffix=%20&amp;style=flat&amp;color=242629&amp;labelColor=5CA424&amp;logoColor=1C1C1C" alt="Curseforge Download"/>  
-    </a>  
+    <a href="https://modrinth.com/mod/dimensional-sable"><img src="https://img.shields.io/modrinth/dt/dimensional-sable?logo=modrinth&label=&suffix=%20&style=flat&color=242629&labelColor=5CA424&logoColor=1C1C1C" alt="Modrinth Download"/></a>
+    <a href="https://www.curseforge.com/minecraft/mc-mods/dimensional-sable"><img src="https://img.shields.io/curseforge/dt/1758851?logo=curseforge&label=&suffix=%20&style=flat&color=242629&labelColor=5CA424&logoColor=1C1C1C" alt="Curseforge Download"/></a>
+  </h1>
 </div>
-</h1>
 
 An addon to the Sable Mod that allows for teleporting sublevels across dimensions!
 
