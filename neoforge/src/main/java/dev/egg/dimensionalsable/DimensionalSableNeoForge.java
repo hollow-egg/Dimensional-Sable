@@ -10,8 +10,8 @@ import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 
 @Mod(DimensionalSable.MODID)
-public class DimensionalSableNeoforge {
-    public DimensionalSableNeoforge(IEventBus modEventBus, ModContainer modContainer) {
+public class DimensionalSableNeoForge {
+    public DimensionalSableNeoForge(IEventBus modEventBus, ModContainer modContainer) {
 
         DimensionalSable.init();
 
