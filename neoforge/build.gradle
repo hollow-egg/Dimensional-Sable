@@ -1,0 +1,67 @@
+plugins {
+    id 'multiloader-loader'
+    id 'net.neoforged.moddev'
+}
+
+neoForge {
+    version = neoforge_version
+    // Automatically enable neoforge AccessTransformers if the file exists
+    def at = project(':common').file('src/main/resources/META-INF/accesstransformer.cfg')
+    if (at.exists()) {
+        accessTransformers.from(at.absolutePath)
+    }
+    parchment {
+        minecraftVersion = parchment_minecraft
+        mappingsVersion = parchment_version
+    }
+    runs {
+        configureEach {
+            systemProperty('neoforge.enabledGameTestNamespaces', mod_id)
+            ideName = "NeoForge ${it.name.capitalize()} (${project.path})" // Unify the run config names with fabric
+        }
+        client {
+            client()
+        }
+        data {
+            data()
+
+            // DataGen can be run by - "./gradlew :neoforge:runData" in Terminal.
+            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+
+        }
+        server {
+            server()
+        }
+    }
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+repositories {
+    maven { url = "https://maven.neoforged.net/releases" }
+
+    maven { url = "https://maven.ithundxr.dev/snapshots" }
+    maven {
+        name = "BlameJared Maven (CrT / Bookshelf)"
+        url = "https://maven.blamejared.com"
+    }
+    maven { url = "https://maven.createmod.net" }
+    maven {
+        url = "https://maven.ryanhcode.dev/releases"
+        name = "RyanHCode Maven"
+    }
+    maven {
+        name = "Fuzs Mod Resources"
+        url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/"
+    }
+}
+
+dependencies {
+    implementation("dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:${sable_version}")
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
