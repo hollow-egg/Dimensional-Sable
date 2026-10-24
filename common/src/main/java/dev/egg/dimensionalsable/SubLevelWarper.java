@@ -14,6 +14,7 @@ import dev.ryanhcode.sable.companion.math.Pose3d;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.SubLevel;
 import dev.ryanhcode.sable.sublevel.plot.LevelPlot;
+import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.core.BlockPos;
@@ -38,10 +39,6 @@ public class SubLevelWarper {
     }
 
     public static int warpConnectedSubLevels(ServerSubLevel targetSubLevel, List<ServerSubLevel> dependents, ServerLevel level, Vector3d position, Quaterniond orientationTransform) {
-
-        // in the same dimension
-        if (targetSubLevel.getLevel() == level) return 0;
-
         final ServerLevel sourceLevel = targetSubLevel.getLevel();
         final ServerSubLevelContainer sourceContainer = SubLevelContainer.getContainer(sourceLevel);
         final ServerSubLevelContainer destinationContainer = SubLevelContainer.getContainer(level);
@@ -56,58 +53,65 @@ public class SubLevelWarper {
         Set<UUID> handled = new HashSet<>();
 
         // save and load sublevels
-        for (ServerSubLevel subLevel : dependents) {
-            RigidBodyHandle physicsHandle = systemSource.getPhysicsHandle(subLevel);
+        for (ServerSubLevel dependent : dependents) {
+            RigidBodyHandle physicsHandle = systemSource.getPhysicsHandle(dependent);
 
-            Vector3d newPos = subLevel.logicalPose().position().sub(targetOldPos, new Vector3d());
+            Vector3d newPos = dependent.logicalPose().position().sub(targetOldPos, new Vector3d());
             R.transform(newPos);
             newPos.add(position);
-            Quaterniond newOrientation = R.mul(subLevel.logicalPose().orientation(), new Quaterniond());
-            Pose3d pose = new Pose3d(newPos, newOrientation, subLevel.logicalPose().rotationPoint(), subLevel.logicalPose().scale());
+            Quaterniond newOrientation = R.mul(dependent.logicalPose().orientation(), new Quaterniond());
+            Pose3d pose = new Pose3d(newPos, newOrientation, dependent.logicalPose().rotationPoint(), dependent.logicalPose().scale());
 
             Vector3d newVel = R.transform(physicsHandle.getLinearVelocity(new Vector3d()));
             Vector3d newAngVel = R.transform(physicsHandle.getAngularVelocity(new Vector3d()));
 
-            BoundingBox3ic plotBounds = subLevel.getPlot().getBoundingBox();
-            BoundingBox3d boundingBox = new BoundingBox3d(plotBounds.minX(), plotBounds.minY(), plotBounds.minZ(), plotBounds.maxX() + 1.0, plotBounds.maxY() + 1.0, plotBounds.maxZ() + 1.0);
-            List<BlockPos> blocks = BlockPos.betweenClosedStream(boundingBox.toMojang()).map(BlockPos::immutable).toList();;
+            BoundingBox3ic plotBounds = dependent.getPlot().getBoundingBox();
+            BoundingBox3d boundingBox = new BoundingBox3d(plotBounds.minX(), plotBounds.minY(), plotBounds.minZ(), plotBounds.maxX(), plotBounds.maxY(), plotBounds.maxZ());
+            List<BlockPos> blocks = BlockPos.betweenClosedStream(plotBounds.toMojang()).map(BlockPos::immutable).toList();;
 
-            final ServerSubLevel newSubLevel = (ServerSubLevel) destinationContainer.allocateNewSubLevel(pose);
+            final ServerSubLevel subLevel = (ServerSubLevel) destinationContainer.allocateNewSubLevel(pose);
 
-            final LevelPlot plot = newSubLevel.getPlot();
+            final LevelPlot plot = subLevel.getPlot();
             plot.newEmptyChunk(plot.getCenterChunk());
-
-            final BoundingBox3i bounds = new BoundingBox3i(boundingBox).expand(1,1,1);
-
-            final BlockPos anchor = subLevel.getPlot().getCenterBlock();
+//            if (plot.getChunkHolder(plot.getCenterChunk()) == null) {
+//                destinationContainer.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED);
+//                DimensionalSable.LOGGER.error("Could not create sub level plot: {}", plot.getCenterChunk());
+//                return 0;
+//            }
+            final BoundingBox3i bounds = new BoundingBox3i(boundingBox);
+            final BlockPos anchor = dependent.getPlot().getCenterBlock();
             final BlockPos plotAnchor = plot.getCenterBlock();
             final SubLevelAssemblyHelper.AssemblyTransform transform = new SubLevelAssemblyHelper.AssemblyTransform(anchor, plotAnchor, 0, Rotation.NONE, level);
 
-            Set<Entity> entities = new HashSet<>(sourceLevel.getEntities(null, subLevel.boundingBox().toMojang().inflate(1.0)));
+            // teleport entities
+            Set<Entity> entities = new HashSet<>(sourceLevel.getEntities(null, dependent.boundingBox().toMojang().inflate(1.0)));
             entities.removeIf(e ->  {
                 if (e.isPassenger()) return true;
                 SubLevel tracking = Sable.HELPER.getTrackingOrVehicleSubLevel(e);
-                if (tracking != null && tracking != subLevel) return true;
+                if (tracking != null && tracking != dependent) return true;
                 return !handled.add(e.getUUID());
             });
             teleportAllEntities(entities, sourceLevel, level, R, targetOldPos, position, plotAnchor.getCenter().subtract(anchor.getCenter()));
+
+            // move blocks
             SubLevelAssemblyHelper.moveBlocks(sourceLevel, transform, blocks);
-
-            final Vector3dc centerOfMass = newSubLevel.getMassTracker().getCenterOfMass();
-            Vec3 subLevelCenter = Vec3.atLowerCornerOf(anchor);
-
-            if (centerOfMass != null) {
-                subLevelCenter = subLevelCenter
-                        .subtract(Vec3.atLowerCornerOf(plotAnchor))
-                        .add(centerOfMass.x(), centerOfMass.y(), centerOfMass.z());
-            } else {
-                newSubLevel.logicalPose().rotationPoint()
+            final Vector3dc centerOfMass = subLevel.getMassTracker().getCenterOfMass();
+            if (centerOfMass == null) {
+                subLevel.logicalPose().rotationPoint()
                         .set(plotAnchor.getX() + 0.5, plotAnchor.getY() + 0.5, plotAnchor.getZ() + 0.5);
             }
 
-            subLevel.logicalPose().position().set(subLevelCenter.x, subLevelCenter.y, subLevelCenter.z);
+            // update position
+            subLevel.logicalPose().position().set(newPos);
+            if (!subLevel.isRemoved()) {
+                destinationContainer.physicsSystem().getPipeline().teleport(subLevel, subLevel.logicalPose().position(), subLevel.logicalPose().orientation());
+            }
+            subLevel.updateLastPose();
 
-            SubLevelAssemblyHelper.moveTrackingPoints(sourceLevel, bounds, newSubLevel, transform);
+            SubLevelAssemblyHelper.moveTrackingPoints(sourceLevel, bounds, subLevel, transform);
+
+            subLevel.setUniqueId(dependent.getUniqueId());
+            subLevel.setName(dependent.getName());
         }
 
         return dependents.size();

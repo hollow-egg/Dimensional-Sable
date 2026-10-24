@@ -31,11 +31,6 @@ public class Commands {
         CommandSourceStack source = ctx.getSource();
         ServerSubLevel sublevel = SubLevelArgumentType.getSingleSubLevel(ctx, "sub_level");
 
-        if (sublevel.getLevel() == dimension) {
-            source.sendFailure(Component.literal("Cannot warp sublevel from " + sublevel.getLevel().dimension().location().getPath() + " to " + dimension.dimension().location().getPath()));
-            return 0;
-        }
-
         int warpCount = SubLevelWarper.warpConnectedSubLevels(sublevel, dimension, sublevel.logicalPose().position());
 
         source.sendSuccess(()->Component.literal("Warped " + warpCount + " sublevels to " + dimension.dimension().location().getPath()), true);
@@ -48,11 +43,6 @@ public class Commands {
 
         CommandSourceStack source = ctx.getSource();
         ServerSubLevel sublevel = SubLevelArgumentType.getSingleSubLevel(ctx, "sub_level");
-
-        if (sublevel.getLevel() == dimension) {
-            source.sendFailure(Component.literal("Cannot warp sublevel from " + sublevel.getLevel().dimension().location().getPath() + " to " + dimension.dimension().location().getPath()));
-            return 0;
-        }
 
         int warpCount = SubLevelWarper.warpConnectedSubLevels(sublevel, dimension, new Vector3d(position.x, position.y, position.z));
 
