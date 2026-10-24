@@ -46,33 +46,32 @@ public class SubLevelWarper {
         final ServerSubLevelContainer destinationContainer = SubLevelContainer.getContainer(level);
         if (sourceContainer == null || destinationContainer == null) return 0;
 
-        SubLevelPhysicsSystem systemSource = SubLevelPhysicsSystem.get(sourceLevel);
+        final SubLevelPhysicsSystem systemSource = SubLevelPhysicsSystem.get(sourceLevel);
 
         // setup transform
         final Quaterniond R = new Quaterniond(orientationTransform).normalize();
         final Vector3d targetOldPos = new Vector3d(targetSubLevel.logicalPose().position());
+        final BlockEntityTransformer blockEntityTransformer = new BlockEntityTransformer(sourceLevel, targetOldPos, position, R);
 
-        Set<UUID> handled = new HashSet<>();
-
+        Set<UUID> handledEntities = new HashSet<>();
         // save and load sublevels
         for (ServerSubLevel dependent : dependents) {
-            RigidBodyHandle physicsHandle = systemSource.getPhysicsHandle(dependent);
+            final RigidBodyHandle physicsHandle = systemSource.getPhysicsHandle(dependent);
 
-            Vector3d newPos = dependent.logicalPose().position().sub(targetOldPos, new Vector3d());
+            final Vector3d newPos = dependent.logicalPose().position().sub(targetOldPos, new Vector3d());
             R.transform(newPos);
             newPos.add(position);
-            Quaterniond newOrientation = R.mul(dependent.logicalPose().orientation(), new Quaterniond());
-            Pose3d pose = new Pose3d(newPos, newOrientation, dependent.logicalPose().rotationPoint(), dependent.logicalPose().scale());
+            final Quaterniond newOrientation = R.mul(dependent.logicalPose().orientation(), new Quaterniond());
+            final Pose3d pose = new Pose3d(newPos, newOrientation, dependent.logicalPose().rotationPoint(), dependent.logicalPose().scale());
 
-            Vector3d newVel = R.transform(physicsHandle.getLinearVelocity(new Vector3d()));
-            Vector3d newAngVel = R.transform(physicsHandle.getAngularVelocity(new Vector3d()));
+            final Vector3d newVel = R.transform(physicsHandle.getLinearVelocity(new Vector3d()));
+            final Vector3d newAngVel = R.transform(physicsHandle.getAngularVelocity(new Vector3d()));
 
-            BoundingBox3ic plotBounds = dependent.getPlot().getBoundingBox();
-            BoundingBox3d boundingBox = new BoundingBox3d(plotBounds.minX(), plotBounds.minY(), plotBounds.minZ(), plotBounds.maxX(), plotBounds.maxY(), plotBounds.maxZ());
-            List<BlockPos> blocks = BlockPos.betweenClosedStream(plotBounds.toMojang()).map(BlockPos::immutable).toList();;
+            final BoundingBox3ic plotBounds = dependent.getPlot().getBoundingBox();
+            final BoundingBox3d boundingBox = new BoundingBox3d(plotBounds.minX(), plotBounds.minY(), plotBounds.minZ(), plotBounds.maxX(), plotBounds.maxY(), plotBounds.maxZ());
+            final List<BlockPos> blocks = BlockPos.betweenClosedStream(plotBounds.toMojang()).map(BlockPos::immutable).toList();
 
             final ServerSubLevel subLevel = (ServerSubLevel) destinationContainer.allocateNewSubLevel(pose);
-
             final LevelPlot plot = subLevel.getPlot();
             plot.newEmptyChunk(plot.getCenterChunk());
 //            if (plot.getChunkHolder(plot.getCenterChunk()) == null) {
@@ -83,26 +82,25 @@ public class SubLevelWarper {
             final BoundingBox3i bounds = new BoundingBox3i(boundingBox);
             final BlockPos anchor = dependent.getPlot().getCenterBlock();
             final BlockPos plotAnchor = plot.getCenterBlock();
-            final BlockEntityTransformer blockEntityTransformer = new BlockEntityTransformer(sourceLevel, targetOldPos, position, R);
             final SubLevelAssemblyHelper.AssemblyTransform transform = new BlockEntityAssemblyTransform(anchor, plotAnchor, 0, Rotation.NONE, level, blockEntityTransformer);
 
             // teleport entities
-            Set<Entity> entities = new HashSet<>(sourceLevel.getEntities(null, dependent.boundingBox().toMojang().inflate(1.0)));
+            final Set<Entity> entities = new HashSet<>(sourceLevel.getEntities(null, dependent.boundingBox().toMojang().inflate(1.0)));
             entities.removeIf(e ->  {
                 if (e.isPassenger()) return true;
                 SubLevel tracking = Sable.HELPER.getTrackingOrVehicleSubLevel(e);
                 if (tracking != null && tracking != dependent) return true;
-                return !handled.add(e.getUUID());
+                return !handledEntities.add(e.getUUID());
             });
             teleportAllEntities(entities, sourceLevel, level, R, targetOldPos, position, plotAnchor.getCenter().subtract(anchor.getCenter()));
 
             // move blocks
             SubLevelAssemblyHelper.moveBlocks(sourceLevel, transform, blocks);
-            final Vector3dc centerOfMass = subLevel.getMassTracker().getCenterOfMass();
-            if (centerOfMass == null) {
-                subLevel.logicalPose().rotationPoint()
-                        .set(plotAnchor.getX() + 0.5, plotAnchor.getY() + 0.5, plotAnchor.getZ() + 0.5);
-            }
+//            final Vector3dc centerOfMass = subLevel.getMassTracker().getCenterOfMass();
+//            if (centerOfMass == null) {
+//                subLevel.logicalPose().rotationPoint()
+//                        .set(plotAnchor.getX() + 0.5, plotAnchor.getY() + 0.5, plotAnchor.getZ() + 0.5);
+//            }
 
             // update position
             subLevel.logicalPose().position().set(newPos);
@@ -110,10 +108,9 @@ public class SubLevelWarper {
                 destinationContainer.physicsSystem().getPipeline().teleport(subLevel, subLevel.logicalPose().position(), subLevel.logicalPose().orientation());
             }
             subLevel.updateLastPose();
+            destinationContainer.physicsSystem().getPipeline().addLinearAndAngularVelocity(subLevel, newVel, newAngVel);
 
             SubLevelAssemblyHelper.moveTrackingPoints(sourceLevel, bounds, subLevel, transform);
-
-            subLevel.setName(dependent.getName());
         }
 
         return dependents.size();
