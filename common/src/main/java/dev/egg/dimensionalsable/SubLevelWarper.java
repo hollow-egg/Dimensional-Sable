@@ -1,5 +1,7 @@
 package dev.egg.dimensionalsable;
 
+import dev.egg.dimensionalsable.utils.BlockEntityAssemblyTransform;
+import dev.egg.dimensionalsable.utils.BlockEntityTransformer;
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.api.SubLevelAssemblyHelper;
 import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
@@ -81,7 +83,8 @@ public class SubLevelWarper {
             final BoundingBox3i bounds = new BoundingBox3i(boundingBox);
             final BlockPos anchor = dependent.getPlot().getCenterBlock();
             final BlockPos plotAnchor = plot.getCenterBlock();
-            final SubLevelAssemblyHelper.AssemblyTransform transform = new SubLevelAssemblyHelper.AssemblyTransform(anchor, plotAnchor, 0, Rotation.NONE, level);
+            final BlockEntityTransformer blockEntityTransformer = new BlockEntityTransformer(sourceLevel, targetOldPos, position, R);
+            final SubLevelAssemblyHelper.AssemblyTransform transform = new BlockEntityAssemblyTransform(anchor, plotAnchor, 0, Rotation.NONE, level, blockEntityTransformer);
 
             // teleport entities
             Set<Entity> entities = new HashSet<>(sourceLevel.getEntities(null, dependent.boundingBox().toMojang().inflate(1.0)));
@@ -110,7 +113,6 @@ public class SubLevelWarper {
 
             SubLevelAssemblyHelper.moveTrackingPoints(sourceLevel, bounds, subLevel, transform);
 
-            subLevel.setUniqueId(dependent.getUniqueId());
             subLevel.setName(dependent.getName());
         }
 
