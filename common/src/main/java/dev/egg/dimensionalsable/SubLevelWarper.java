@@ -45,7 +45,8 @@ public class SubLevelWarper {
 
         final ServerLevel sourceLevel = targetSubLevel.getLevel();
         final ServerSubLevelContainer sourceContainer = SubLevelContainer.getContainer(sourceLevel);
-        if (sourceContainer == null) return 0;
+        final ServerSubLevelContainer destinationContainer = SubLevelContainer.getContainer(level);
+        if (sourceContainer == null || destinationContainer == null) return 0;
 
         SubLevelPhysicsSystem systemSource = SubLevelPhysicsSystem.get(sourceLevel);
 
@@ -55,6 +56,7 @@ public class SubLevelWarper {
         Tag blockEntityTransformer = BlockEntityTransformer.createTransformTag(sourceLevel, targetOldPos, position, R);
 
         // save and load sublevels
+        List<ServerSubLevel> newSubLevels = new ArrayList<>(); // saved in case of failure
         for (ServerSubLevel subLevel : dependents) {
             RigidBodyHandle physicsHandle = systemSource.getPhysicsHandle(subLevel);
 
@@ -79,7 +81,20 @@ public class SubLevelWarper {
             fullTag.put("plot", plotTag);
 
             final SubLevelData original = SubLevelSerializer.fromData(fullTag);
-            SubLevelSerializer.fullyLoad(level, original);
+            try {
+                ServerSubLevel newSubLevel = SubLevelSerializer.fullyLoad(level, original);
+                newSubLevels.add(newSubLevel);
+            } catch (final IndexOutOfBoundsException e) {
+                //remove previous sublevels
+                SubLevel halfLoaded = destinationContainer.getSubLevel(original.uuid());
+                if (halfLoaded != null) {
+                    destinationContainer.removeSubLevel(halfLoaded, SubLevelRemovalReason.REMOVED);
+                }
+                for (ServerSubLevel s : newSubLevels) {
+                    destinationContainer.removeSubLevel(s, SubLevelRemovalReason.REMOVED);
+                }
+                throw new RuntimeException("Could not teleport sublevel: " + subLevel.getUniqueId() + "! Does not fit world bounds of target level.");
+            }
         }
 
         // remove old sublevels
@@ -87,7 +102,7 @@ public class SubLevelWarper {
         for (ServerSubLevel subLevel : dependents) {
             // teleport entities
             Set<Entity> entities = new HashSet<>(sourceLevel.getEntities(null, subLevel.boundingBox().toMojang().inflate(1.0)));
-            entities.removeIf(e ->  e.isPassenger() || !handled.add(e.getUUID()));
+            entities.removeIf(e -> e.isPassenger() || !handled.add(e.getUUID()));
             teleportAllEntities(entities, sourceLevel, level, R, targetOldPos, position);
 
             ((ServerSubLevelOccupancy) subLevel).dimensionalsable$markDimensionalRemove();
