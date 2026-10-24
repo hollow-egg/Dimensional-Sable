@@ -1,30 +1,29 @@
 package dev.egg.dimensionalsable;
 
-import dev.egg.dimensionalsable.utils.BlockEntityTransformer;
-import dev.egg.dimensionalsable.utils.ServerSubLevelOccupancy;
 import dev.ryanhcode.sable.Sable;
+import dev.ryanhcode.sable.api.SubLevelAssemblyHelper;
 import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
 import dev.ryanhcode.sable.api.entity.EntitySubLevelUtil;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
+import dev.ryanhcode.sable.companion.math.BoundingBox3i;
+import dev.ryanhcode.sable.companion.math.BoundingBox3ic;
 import dev.ryanhcode.sable.companion.math.Pose3d;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.SubLevel;
-import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
-import dev.ryanhcode.sable.sublevel.storage.serialization.SubLevelData;
-import dev.ryanhcode.sable.sublevel.storage.serialization.SubLevelSerializer;
+import dev.ryanhcode.sable.sublevel.plot.LevelPlot;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
-import dev.ryanhcode.sable.util.SableNBTUtils;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 import java.util.*;
 
@@ -45,14 +44,16 @@ public class SubLevelWarper {
 
         final ServerLevel sourceLevel = targetSubLevel.getLevel();
         final ServerSubLevelContainer sourceContainer = SubLevelContainer.getContainer(sourceLevel);
-        if (sourceContainer == null) return 0;
+        final ServerSubLevelContainer destinationContainer = SubLevelContainer.getContainer(level);
+        if (sourceContainer == null || destinationContainer == null) return 0;
 
         SubLevelPhysicsSystem systemSource = SubLevelPhysicsSystem.get(sourceLevel);
 
         // setup transform
         final Quaterniond R = new Quaterniond(orientationTransform).normalize();
         final Vector3d targetOldPos = new Vector3d(targetSubLevel.logicalPose().position());
-        Tag blockEntityTransformer = BlockEntityTransformer.createTransformTag(sourceLevel, targetOldPos, position, R);
+
+        Set<UUID> handled = new HashSet<>();
 
         // save and load sublevels
         for (ServerSubLevel subLevel : dependents) {
@@ -67,31 +68,46 @@ public class SubLevelWarper {
             Vector3d newVel = R.transform(physicsHandle.getLinearVelocity(new Vector3d()));
             Vector3d newAngVel = R.transform(physicsHandle.getAngularVelocity(new Vector3d()));
 
-            SubLevelData data = SubLevelSerializer.toData(subLevel, List.of());
+            BoundingBox3ic plotBounds = subLevel.getPlot().getBoundingBox();
+            BoundingBox3d boundingBox = new BoundingBox3d(plotBounds.minX(), plotBounds.minY(), plotBounds.minZ(), plotBounds.maxX() + 1.0, plotBounds.maxY() + 1.0, plotBounds.maxZ() + 1.0);
+            List<BlockPos> blocks = BlockPos.betweenClosedStream(boundingBox.toMojang()).map(BlockPos::immutable).toList();;
 
-            final CompoundTag fullTag = data.fullTag();
+            final ServerSubLevel newSubLevel = (ServerSubLevel) destinationContainer.allocateNewSubLevel(pose);
 
-            fullTag.put("pose", SableNBTUtils.writePose3d(pose));
-            fullTag.put("linear_velocity", SableNBTUtils.writeVector3d(newVel));
-            fullTag.put("angular_velocity", SableNBTUtils.writeVector3d(newAngVel));
-            CompoundTag plotTag = fullTag.getCompound("plot");
-            BlockEntityTransformer.addTransformTag(plotTag, blockEntityTransformer);
-            fullTag.put("plot", plotTag);
+            final LevelPlot plot = newSubLevel.getPlot();
+            plot.newEmptyChunk(plot.getCenterChunk());
 
-            final SubLevelData original = SubLevelSerializer.fromData(fullTag);
-            SubLevelSerializer.fullyLoad(level, original);
-        }
+            final BoundingBox3i bounds = new BoundingBox3i(boundingBox).expand(1,1,1);
 
-        // remove old sublevels
-        Set<UUID> handled = new HashSet<>();
-        for (ServerSubLevel subLevel : dependents) {
-            // teleport entities
+            final BlockPos anchor = subLevel.getPlot().getCenterBlock();
+            final BlockPos plotAnchor = plot.getCenterBlock();
+            final SubLevelAssemblyHelper.AssemblyTransform transform = new SubLevelAssemblyHelper.AssemblyTransform(anchor, plotAnchor, 0, Rotation.NONE, level);
+
             Set<Entity> entities = new HashSet<>(sourceLevel.getEntities(null, subLevel.boundingBox().toMojang().inflate(1.0)));
-            entities.removeIf(e ->  e.isPassenger() || !handled.add(e.getUUID()));
-            teleportAllEntities(entities, sourceLevel, level, R, targetOldPos, position);
+            entities.removeIf(e ->  {
+                if (e.isPassenger()) return true;
+                SubLevel tracking = Sable.HELPER.getTrackingOrVehicleSubLevel(e);
+                if (tracking != null && tracking != subLevel) return true;
+                return !handled.add(e.getUUID());
+            });
+            teleportAllEntities(entities, sourceLevel, level, R, targetOldPos, position, plotAnchor.getCenter().subtract(anchor.getCenter()));
+            SubLevelAssemblyHelper.moveBlocks(sourceLevel, transform, blocks);
 
-            ((ServerSubLevelOccupancy) subLevel).dimensionalsable$markDimensionalRemove();
-            sourceContainer.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED);
+            final Vector3dc centerOfMass = newSubLevel.getMassTracker().getCenterOfMass();
+            Vec3 subLevelCenter = Vec3.atLowerCornerOf(anchor);
+
+            if (centerOfMass != null) {
+                subLevelCenter = subLevelCenter
+                        .subtract(Vec3.atLowerCornerOf(plotAnchor))
+                        .add(centerOfMass.x(), centerOfMass.y(), centerOfMass.z());
+            } else {
+                newSubLevel.logicalPose().rotationPoint()
+                        .set(plotAnchor.getX() + 0.5, plotAnchor.getY() + 0.5, plotAnchor.getZ() + 0.5);
+            }
+
+            subLevel.logicalPose().position().set(subLevelCenter.x, subLevelCenter.y, subLevelCenter.z);
+
+            SubLevelAssemblyHelper.moveTrackingPoints(sourceLevel, bounds, newSubLevel, transform);
         }
 
         return dependents.size();
@@ -138,7 +154,7 @@ public class SubLevelWarper {
         return visited;
     }
 
-    private static void teleportAllEntities(Set<Entity> entities, ServerLevel sourceLevel, ServerLevel destinationLevel, Quaterniond rotation, Vector3d targetOldPos, Vector3d targetNewPos) {
+    private static void teleportAllEntities(Set<Entity> entities, ServerLevel sourceLevel, ServerLevel destinationLevel, Quaterniond rotation, Vector3d targetOldPos, Vector3d targetNewPos, Vec3 blockOffset) {
         // hold vehicles for teleport
         Map<UUID,List<UUID>> vehicles = new HashMap<>();
         ObjectOpenHashSet<Entity> frontier = new ObjectOpenHashSet<>();
@@ -159,7 +175,7 @@ public class SubLevelWarper {
             vehicles.put(vehicle.getUUID(), passengerIDs);
         }
         for (Entity entity : entities) {
-            teleportEntity(entity, sourceLevel, destinationLevel, rotation, targetOldPos, targetNewPos);
+            teleportEntity(entity, sourceLevel, destinationLevel, rotation, targetOldPos, targetNewPos, blockOffset);
         }
         // attempt to re-ride entities
         vehicles.forEach((entityID, passengerIDs) -> {
@@ -174,11 +190,11 @@ public class SubLevelWarper {
         });
     }
 
-    private static void teleportEntity(Entity entity, ServerLevel sourceLevel, ServerLevel destinationLevel, Quaterniond rotation, Vector3d targetOldPos, Vector3d targetNewPos)
+    private static void teleportEntity(Entity entity, ServerLevel sourceLevel, ServerLevel destinationLevel, Quaterniond rotation, Vector3d targetOldPos, Vector3d targetNewPos, Vec3 blockOffset)
     {
         Vec3 newPos;
         if (!EntitySubLevelUtil.shouldKick(entity) && !entity.isPassenger()) { // paintings and other stationary entities
-            newPos = entity.trackingPosition();
+            newPos = entity.trackingPosition().add(blockOffset);
         }
         else { // all other entities
             Vec3 pos = Sable.HELPER.projectOutOfSubLevel(sourceLevel, entity.position());

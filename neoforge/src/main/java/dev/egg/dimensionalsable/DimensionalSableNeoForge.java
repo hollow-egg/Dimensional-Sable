@@ -21,16 +21,6 @@ public class DimensionalSableNeoForge {
 
     public static class Events {
         @SubscribeEvent
-        public static void serverStart(ServerStartingEvent event) {
-            DimensionalSable.loadSharedSubLevelContainer(event.getServer());
-        }
-
-        @SubscribeEvent
-        public static void levelSave(LevelEvent.Save event) {
-            DimensionalSable.saveSharedSubLevelContainer(event.getLevel().getServer());
-        }
-
-        @SubscribeEvent
         public static void registerCommands(RegisterCommandsEvent event){
             Commands.register(event.getDispatcher());
         }

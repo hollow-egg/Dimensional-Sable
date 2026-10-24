@@ -11,8 +11,5 @@ public class DimensionalSableFabric implements ModInitializer {
         DimensionalSable.init();
 
         CommandRegistrationCallback.EVENT.register((dispatcher, dedicated, selection) -> Commands.register(dispatcher));
-
-        ServerLifecycleEvents.SERVER_STARTING.register(DimensionalSable::loadSharedSubLevelContainer);
-        ServerLifecycleEvents.BEFORE_SAVE.register((server, empty, force)->DimensionalSable.saveSharedSubLevelContainer(server));
     }
 }
